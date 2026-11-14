@@ -1,0 +1,20 @@
+default_permissions = "accountable"
+
+[permissions.accountable]
+extends = ":workspace"
+
+[permissions.accountable.filesystem]
+glob_scan_max_depth = 3
+
+[permissions.accountable.filesystem.":workspace_roots"]
+"**/*.env" = "deny"
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+
+[mcp_servers.playwright.tools.browser_navigate]
+approval_mode = "approve"
+
+[mcp_servers.playwright.tools.browser_evaluate]
+approval_mode = "approve"

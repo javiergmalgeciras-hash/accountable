@@ -1,3 +1,8 @@
+---
+name: brand
+description: Use this skill for any user interface (UI) work in the Accountable project. Follow its typography, color, surface, avoidance, and tone guidelines.
+---
+
 # Brand
 
 ## Fonts
