@@ -127,7 +127,6 @@ The UI must support a single administrator managing students, classes, absences 
 
 ## Mobile-first design
 
-The application is a PWA intended primarily for a single Android smartphone operated by the studio owner.
 
 - Optimize layouts for portrait orientation.
 - Prefer single-column layouts on narrow screens.
@@ -137,17 +136,19 @@ The application is a PWA intended primarily for a single Android smartphone oper
 - Use concise forms and clear field labels.
 - Minimize typing and repetitive administrative work.
 - Keep navigation consistent across screens.
-- Do not introduce login, password or administrator authentication interfaces.
 
-## Offline requirements
 
-The interface must work without Internet connectivity during normal operation.
+## Technical compatibility
 
-- Use system fonts or locally bundled font assets.
-- Store required icons and images locally.
-- Do not depend on external CDNs for visual resources.
-- Avoid remote fonts, icons and runtime styling dependencies.
-- Ensure that the UI remains usable when the device is offline.
+The visual design must follow the architecture and development stages defined in `docs/TECH_STACK.md`.
+
+- Support the React, Vite and TypeScript frontend used in the course.
+- Support administrator authentication when introduced during the Supabase Auth stage.
+- Use responsive, mobile-first layouts without requiring PWA installation or offline operation.
+- Preserve the Regimental Blue visual identity.
+- Support the dark-mode exercise introduced in the course.
+- Do not introduce technical restrictions that conflict with the course architecture.
+- Keep students as business records, not application users.
 
 ## Accessibility
 

@@ -1,16 +1,18 @@
 # AI SDLC: The AI-Native Software Engineer in the Agentic Era
 
-## Accountable: the course project
+## Proyecto del curso adaptado: gestión de una escuela de pilates
 
 ![An alien holds a model ship by Tower Bridge at sunrise](assets/accountable.jpg)
 
-This is the repo that accompanies the course. Accountable is a business management system: a sales CRM that grows into a full Business OS, including ERP. Over the two weeks you and your coding agent build it together, using the practices the course teaches.
+Este repositorio conserva el curso AI SDLC de Ed Donner: su metodología, tecnologías, integraciones y secuencia de ejercicios. En esta adaptación, la aplicación gestiona alumnos, grupos, clases, ausencias y recuperaciones de una escuela de pilates. El alcance funcional vigente está en docs/intent.md; el stack y sus fases, en docs/TECH_STACK.md.
+
+Las referencias funcionales a CRM, ERP y contabilidad que aparecen en las guías y checkpoints describen el proyecto original del curso. Conserva sus procedimientos y herramientas, y adapta las tareas de producto al dominio de pilates. Las ramas originales de Ed son referencias históricas, no una sustitución del trabajo de esta rama.
 
 _If you're looking at this in VS Code or Cursor, right-click `README.md` in the Explorer on the left and choose **Open Preview** to see it formatted._
 
 ## What's in this repo
 
-- `docs/`: the documents for Accountable, such as what we build and the tech stack it uses.
+- docs/: la intención funcional de pilates, el stack técnico y el estado de esta adaptación.
 - `course/`: your guides. [course/SETUP.md](course/SETUP.md) installs the tools, and [course/coding_agents/](course/coding_agents/) has the steps for each coding agent.
 - `course/for_agents/`: guides for your coding agent, so it can help you with the course.
 - `course/instructions/`: extra instructions for some days, such as the review policy for Week 1 Day 3, every prompt for Week 1 Days 4 and 5, the worktree demo for Week 2 Day 1, my checkpoints for Week 2 Days 2 to 4, and every prompt for Week 2 Day 5.
