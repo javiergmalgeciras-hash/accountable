@@ -1,139 +1,117 @@
 # Intent: MVP de gestión de ausencias y recuperaciones — Escuela de Pilates
 
 **Estado:** Borrador para validación con la responsable del centro  
-**Producto:** Aplicación local para un único teléfono Android  
+**Producto:** Aplicación local para un único teléfono Android, de uso exclusivo por la propietaria  
 **Referencia de estructura:** `intent.md` del proyecto Accountable (curso AI SDLC)
 
 ## Problem
 
-La escuela de pilates, con aproximadamente 50–150 alumnos, gestiona actualmente las ausencias y las recuperaciones de clases por teléfono o presencialmente. Esto exige intervención manual, dificulta conocer las plazas libres y puede provocar errores de asignación, duplicidades o sobreocupación.
+La escuela de pilates, con aproximadamente 50–150 alumnos, gestiona actualmente las ausencias y las recuperaciones de clases por teléfono o presencialmente. La propietaria necesita consultar con rapidez las plazas disponibles y registrar los cambios sin recurrir a anotaciones o comprobaciones manuales que puedan producir duplicidades y sobreocupación.
 
-Se quiere permitir que los alumnos gestionen presencialmente sus cambios desde un dispositivo del centro, sin depender de que la responsable tramite cada solicitud. No se pretende crear todavía un portal remoto ni una aplicación con cuentas individuales.
+El MVP no busca que los alumnos utilicen la aplicación. Los alumnos comunican sus solicitudes por los canales habituales y **la propietaria es la única persona que opera la herramienta** desde su propio teléfono Android.
 
 ## Proposed outcome
 
-El MVP es una aplicación de autoservicio presencial para **un único teléfono Android del centro**, instalable como PWA y utilizable sin conexión a Internet durante su uso habitual. Se desarrolla en un ordenador con VS Code y Codex, pero el dispositivo de uso final no depende de un ordenador encendido ni de un servidor.
+El MVP es una **PWA de gestión interna**, instalada en un único teléfono Android de la propietaria, que funciona sin conexión a Internet durante su uso habitual. Se desarrolla con VS Code y Codex, pero el dispositivo de uso final no necesita un ordenador ni un servidor encendido.
 
-La aplicación tiene dos modos claramente diferenciados:
+### Gestión exclusiva de la administradora
 
-### Modo alumno
-
-1. El alumno introduce su **número de teléfono** para localizar su ficha. No hay contraseña individual ni cuentas de usuario.
-2. Si el teléfono está registrado, puede consultar sus próximas clases habituales y las ausencias y recuperaciones que tenga registradas. Si no está registrado, se le indica que contacte con la administración; no puede darse de alta por sí mismo.
-3. Puede comunicar una ausencia de una clase futura, siempre que falten **al menos 24 horas** para su comienzo.
-4. Al registrar una ausencia válida, se libera una plaza de esa sesión para que pueda ofrecerse como recuperación a otro alumno.
-5. Puede reservar una recuperación en una sesión futura **con plaza disponible** y del **mismo nivel y de la misma modalidad**, respetando las reglas que estén configuradas. La recuperación puede reservarse antes de que llegue la fecha de la clase habitual a la que faltará.
-6. Puede registrar una ausencia sin elegir todavía una recuperación y volver posteriormente para reservarla, si mantiene el derecho a recuperarla, que caduca siete días naturales después de la fecha de la clase habitual ausente.
-7. La aplicación confirma claramente cada operación y evita que una misma ausencia genere recuperaciones duplicadas o que una sesión supere su aforo.
-8. La interfaz es sencilla, táctil y legible en una pantalla de smartphone Android, con un camino corto para completar la operación y una forma evidente de volver a la pantalla inicial.
-
-**Importante:** el teléfono es el identificador único del alumno, pero conocerlo no acredita su identidad. Esta simplificación se acepta provisionalmente para el prototipo y deberá validarse antes de operar con datos reales.
-
-### Modo administración
-
-1. La responsable accede a un área protegida mediante un **código privado de administración**.
-2. Puede crear, consultar, editar y dar de baja alumnos, registrando únicamente **nombre y número de teléfono** como datos personales; el teléfono debe ser único.
-3. Puede crear y modificar grupos, sus niveles o modalidades, horarios, aforos y asignaciones de alumnos a grupos.
-4. Puede consultar por fecha o grupo las sesiones, sus plazas ocupadas y disponibles, las ausencias y las recuperaciones.
-5. Puede registrar o corregir ausencias y recuperaciones cuando sea necesario, sin romper las reglas de capacidad y consistencia de datos.
-6. Puede cambiar su código alfanumérico de 10 caracteres y podrá solicitar su restablecimiento: se generará un código nuevo y se enviará por correo electrónico a la dirección previamente configurada de la responsable. El código nunca se mostrará en pantalla ni se almacenará en texto plano. El envío requiere conexión a Internet y un mecanismo seguro de autorización, pendiente de diseño técnico.
-7. La sesión administrativa se puede cerrar explícitamente y se bloquea tras un periodo de inactividad configurable o definido durante la especificación.
-8. Puede exportar una copia de seguridad estructurada de los datos y restaurarla, con confirmación previa antes de sustituir la información existente. La responsable podrá exportar y restaurar archivos JSON, con un recordatorio semanal de copia. La exportación será manual y funcionará sin conexión; podrá guardar el archivo donde prefiera.
+1. La propietaria abre la aplicación directamente en su móvil. **No hay cuentas, inicio de sesión, PIN, contraseñas ni recuperación de credenciales** dentro del MVP. La protección física y el bloqueo del dispositivo quedan fuera de la autenticación de la aplicación.
+2. Puede crear, consultar, editar y dar de baja alumnos, guardando **nombre y número de teléfono**. El **nombre es obligatorio, único e identificador visible del alumno**; no se permiten duplicados, tras normalizar espacios y diferencias entre mayúsculas y minúsculas. El teléfono se utiliza como dato de contacto, no como identificador ni para iniciar sesión. La obligatoriedad del teléfono queda pendiente de confirmar.
+3. Puede crear y modificar grupos, niveles, modalidades, horarios, aforos y asignaciones de alumnos.
+4. Dispone de un calendario de sesiones para consultar clases programadas, alumnos asignados, ausencias, recuperaciones, plazas ocupadas y huecos libres.
+5. Cuando un alumno comunica una ausencia por teléfono o presencialmente, la propietaria selecciona al alumno y la clase y registra la ausencia. La aplicación valida el preaviso mínimo de **24 horas** y libera la plaza correspondiente.
+6. Puede consultar las clases alternativas disponibles para una recuperación y reservar una plaza en nombre del alumno, siempre que coincidan **nivel y modalidad**, exista capacidad y la sesión se celebre dentro de los **siete días naturales posteriores** a la clase habitual a la que falta. La reserva puede hacerse antes de la fecha de esa clase habitual.
+7. Puede registrar una ausencia sin asignar todavía recuperación. Cada ausencia origina como máximo una recuperación; una recuperación confirmada no se cancela ni se cambia y, si no se utiliza, se pierde.
+8. Puede corregir registros administrativos cuando sea necesario, conservando la coherencia de plazas y derechos. Cualquier excepción a las reglas de recuperación requiere una decisión funcional explícita, no se presupone.
+9. Puede marcar festivos o días no lectivos en el calendario y habilitar sesiones en esas fechas cuando proceda.
+10. Puede **exportar manualmente** los datos a un archivo JSON y restaurar una copia, con confirmación antes de reemplazar datos. La aplicación muestra un **recordatorio semanal** para realizar la copia; no se requiere envío automático a Gmail o Google Drive.
 
 ### Secciones principales
 
-- **Inicio / Identificación:** entrada de teléfono para alumnos y acceso separado a administración.
-- **Mis clases:** próximas sesiones habituales, ausencias registradas y recuperaciones disponibles o reservadas.
-- **Comunicar ausencia:** selección de sesión, validación de las 24 horas y confirmación.
-- **Reservar recuperación:** selección de una ausencia con derecho a recuperación, consulta de sesiones compatibles con plazas y reserva.
-- **Administración:** alumnos, grupos y horarios, asignaciones, calendario de sesiones, ausencias, recuperaciones, aforos y copias de seguridad.
+- **Calendario / Inicio:** sesiones por fecha, grupos, ocupación y plazas disponibles.
+- **Alumnos:** alta, edición, búsqueda por nombre y asignación a grupos.
+- **Grupos y horarios:** nivel, modalidad, recurrencia, capacidad y participantes.
+- **Registrar ausencia:** selección de alumno y sesión habitual, validación de las 24 horas y liberación de plaza.
+- **Gestionar recuperaciones:** derechos pendientes, sesiones compatibles con huecos y reservas confirmadas.
+- **Configuración y copias:** festivos, exportación y restauración JSON, recordatorio semanal.
 
 ### Registros del sistema
 
-- **Alumno:** nombre y teléfono único; asignación a uno o varios grupos si las reglas del centro lo requieren.
-- **Grupo:** nombre, nivel o modalidad, horario habitual y aforo.
+- **Alumno:** identificador técnico interno estable, nombre visible único y número de teléfono; asignaciones a grupos. El identificador técnico permite conservar relaciones si se cambia el nombre.
+- **Grupo:** nombre, nivel, modalidad, horario habitual y aforo.
 - **Sesión:** fecha y hora concretas, grupo, capacidad y ocupación calculada a partir de asignaciones, ausencias y recuperaciones.
 - **Ausencia:** alumno, sesión habitual afectada, fecha de registro y estado.
 - **Recuperación:** alumno, ausencia que origina el derecho, sesión alternativa reservada y estado.
-- **Día de calendario:** fecha marcada como lectiva o no lectiva; administración puede habilitar clases en festivos.
-- **Configuración de administración:** credencial protegida y parámetros locales necesarios para operar.
+- **Día de calendario:** fecha lectiva o no lectiva y posibles sesiones habilitadas excepcionalmente.
+- **Configuración local:** parámetros necesarios y fecha de la última copia de seguridad registrada.
 
-Los registros operativos contienen relaciones con alumnos y clases, pero **no se recopilarán otros datos personales** como correo electrónico, domicilio, fecha de nacimiento o información médica.
+No se recopilan correos electrónicos, domicilios, fechas de nacimiento ni información médica en el MVP. El teléfono y el nombre son datos personales y su tratamiento deberá revisarse antes de usar datos reales.
 
 ### Datos de ejemplo
 
-La aplicación incluirá datos ficticios y realistas para probar todas las pantallas: alumnos, grupos con distintos niveles o modalidades, sesiones futuras, clases completas y con plazas libres, ausencias válidas y fuera de plazo, recuperaciones pendientes y confirmadas. Debe existir una manera documentada de reiniciar el entorno de demostración sin confundirlo con los datos reales.
+Se incluirán datos ficticios para probar alumnos, grupos, sesiones futuras, clases completas y con plazas, ausencias dentro y fuera de plazo, recuperaciones pendientes y confirmadas, festivos y restauración de copias. Se documentará cómo reiniciar los datos de demostración sin confundirlos con los reales.
 
 ### Look and feel
 
-Diseño **mobile-first**, para pantalla vertical de teléfono Android, con botones táctiles grandes, tipografía legible, mensajes claros y pasos mínimos. El modo alumno debe ser especialmente sencillo y no exponer herramientas administrativas.
+Diseño **mobile-first** para pantalla vertical Android, con calendario fácil de consultar, botones táctiles grandes, búsquedas rápidas por alumno, indicadores claros de plazas disponibles y flujos cortos para registrar ausencias y recuperaciones. Toda la interfaz está orientada a una única administradora; no existe modo alumno.
 
 ## Affected users and systems
 
-- **Alumnos:** utilizan presencialmente el mismo teléfono Android del centro, introduciendo su teléfono como identificador.
-- **Responsable del centro:** configura y supervisa alumnos, grupos, horarios y recuperaciones desde el modo administrador.
-- **Dispositivo:** un único smartphone Android dedicado a la escuela; no se contempla sincronización entre dispositivos.
-- **Sistemas externos:** la operación diaria no depende de servicios externos. El restablecimiento del código de administración requiere correo electrónico y conectividad. Las copias JSON se exportan y restauran localmente, sin integración automática con Google Drive o Gmail. No hay otras integraciones previstas.
+- **Propietaria / administradora:** única usuaria de la aplicación, desde su teléfono Android; registra las solicitudes recibidas y gestiona clases, alumnos y plazas.
+- **Alumnos:** personas cuyos datos y reservas administra el centro; **no acceden a la aplicación**.
+- **Dispositivo:** un único smartphone Android con datos locales; no se contempla sincronización multidispositivo.
+- **Sistemas externos:** ninguno para la operación diaria. Las copias JSON pueden guardarse o compartirse manualmente mediante las opciones del teléfono, sin integración automática con Gmail o Drive.
 
 ## Constraints
 
-- El MVP se desarrollará como **PWA instalable en Android**, con funcionamiento offline una vez instalada y con los recursos necesarios almacenados localmente.
-- La aplicación y los datos deben funcionar en el propio teléfono, **sin ordenador, servidor externo ni conexión a Internet durante el uso habitual**. La instalación inicial puede requerir conexión.
-- La persistencia local debe conservar los cambios tras cerrar y reabrir la aplicación o reiniciar el teléfono. Se debe advertir de que borrar los datos de la aplicación puede eliminar la información.
-- Deben existir **exportación, importación y restauración de copias de seguridad**, probadas de extremo a extremo. El formato será JSON estructurado y restaurable, no Google Docs. Se mostrará un recordatorio semanal y la responsable realizará la exportación manual; no se requiere automatización hacia Drive o Gmail. No se asumirá que GitHub guarda los datos del negocio.
-- Solo se guardarán **nombre y teléfono** como datos personales del alumno; los demás registros serán datos operativos necesarios para organizar clases y recuperaciones.
-- El teléfono del alumno es obligatorio y único. Los números deben normalizarse de forma coherente para evitar duplicados por espacios o formatos distintos. No se permiten teléfonos compartidos entre alumnos.
-- Para comunicar una ausencia deben faltar al menos **24 horas** para el inicio de la sesión afectada.
-- Una recuperación solo puede reservarse en un grupo del **mismo nivel y modalidad** y si existe una plaza disponible.
-- Se permite reservar la recuperación **antes de que ocurra la ausencia**, pero no generar más de una recuperación activa por la misma ausencia.
-- La recuperación debe disfrutarse **dentro de los siete días naturales posteriores a la fecha de la sesión habitual ausente**; contando desde la fecha de la clase ausente; una sesión del séptimo día natural estará dentro del plazo.
-- Una recuperación confirmada **no puede cancelarse ni cambiarse por el alumno**. Si no asiste, pierde ese derecho y no se genera otro.
-- Administración puede configurar días no lectivos o festivos y habilitarlos para clases cuando corresponda.
-- El acceso administrativo exige un código **alfanumérico de 10 caracteres**, no almacenado en texto plano; el restablecimiento generará un nuevo código de 10 caracteres y lo enviará al correo previamente configurado de la responsable. No se mostrará en pantalla. El método seguro de autorización del restablecimiento queda pendiente de diseño.
-- La aplicación debe poder trasladarse a otro teléfono Android mediante un proceso documentado de instalación y restauración de datos, con la mayor compatibilidad razonable, sin prometer funcionamiento universal en todas las versiones de Android o navegadores.
-- **Fuera del MVP:** acceso remoto de alumnos, cuentas y contraseñas individuales, sincronización multidispositivo, publicación en Google Play, pagos, notificaciones push, integraciones distintas de las copias de seguridad previstas, analítica avanzada, inteligencia artificial y gestión de múltiples centros.
+- PWA instalable en Android y operativa offline tras la instalación inicial, sin ordenador ni servidor externo en el uso habitual.
+- Un único usuario operativo: la propietaria. **Sin autenticación de aplicación**, sin panel separado ni funciones de autoservicio para alumnos. Se asume que el dispositivo está bajo su control; el riesgo de acceso a datos si se pierde o desbloquea el móvil queda pendiente de mitigación.
+- Persistencia local tras cerrar y reabrir la PWA o reiniciar el teléfono. Borrar datos de la aplicación puede eliminar la información.
+- Exportación, importación y restauración manual de JSON estructurado, con recordatorio semanal y pruebas de recuperación completas. GitHub no es una copia de los datos operativos.
+- Datos personales del alumno limitados a **nombre y número de teléfono**. Nombre obligatorio y único tras normalización; no se usa el teléfono como identificador ni se exige unicidad del teléfono. La obligatoriedad del teléfono queda pendiente de confirmar.
+- Identificador interno estable por alumno para no romper referencias si cambia su nombre. No se permiten nombres duplicados en el MVP; los homónimos son un riesgo funcional a revisar.
+- Ausencias: mínimo **24 horas de antelación** respecto al inicio de la clase habitual.
+- Recuperaciones: grupo del **mismo nivel y modalidad**, con plaza libre, dentro de los **siete días naturales posteriores** a la fecha de la clase habitual ausente; el séptimo día está incluido.
+- Se permite reservar la recuperación antes de la ausencia efectiva, pero cada ausencia genera como máximo una recuperación. Una recuperación confirmada no puede cancelarse ni cambiarse; si no se utiliza, se pierde.
+- La administradora puede configurar festivos y habilitar sesiones en esos días.
+- La PWA debe poder instalarse y restaurarse en otro teléfono Android compatible mediante un proceso documentado; no se garantiza compatibilidad con todas las versiones y navegadores.
+- **Fuera del MVP:** acceso de alumnos, autenticación de usuarios, recuperación de códigos, acceso remoto, sincronización multidispositivo, Google Play, pagos, notificaciones push, integración automática con correo o Drive, analítica avanzada, IA y múltiples centros.
 
 ## Success criteria
 
-1. Se puede instalar la PWA en un teléfono Android compatible, abrirla desde su icono y usar las funciones principales **sin Internet**, sin ordenador ni servidor externo.
-2. Un alumno registrado introduce su teléfono y ve únicamente la información operativa necesaria para gestionar sus clases. Un teléfono no registrado no permite operar.
-3. Administración puede crear y modificar alumnos, grupos, horarios, aforos y asignaciones; no se pueden registrar dos alumnos con el mismo teléfono normalizado.
-4. Una ausencia comunicada con al menos 24 horas de antelación se registra y libera la plaza; una ausencia fuera de plazo se rechaza con un mensaje comprensible.
-5. Una recuperación solo se ofrece en sesiones del mismo nivel y modalidad, dentro del plazo de siete días naturales posterior a la ausencia y con plazas disponibles; al confirmarla se actualiza la ocupación y no se excede el aforo.
-6. Se puede reservar una recuperación antes de la fecha de la ausencia, y también comunicar una ausencia sin reservar inmediatamente una recuperación. La reserva no puede cancelarse por el alumno y la inasistencia consume el derecho.
-7. El sistema impide reservas duplicadas para el mismo derecho de recuperación y mantiene coherencia entre ausencias, recuperaciones y plazas tras cada operación.
-8. El panel de administración no es accesible sin el código correcto; el código puede cambiarse, la sesión puede cerrarse y el restablecimiento por correo electrónico está protegido contra solicitudes no autorizadas y probado con conexión; se valida la longitud alfanumérica de 10 caracteres.
-9. Todos los cambios persisten tras cerrar y reabrir la aplicación y tras reiniciar el dispositivo. Se puede exportar una copia estructurada, restaurarla y comprobar que los datos recuperados son correctos. Se verifica el recordatorio semanal y la exportación y restauración manual de JSON.
-10. La interfaz se prueba manualmente en un **smartphone Android real**, incluyendo navegación táctil, teclado numérico, legibilidad y los flujos completos de alumno y administración. No basta con que pasen pruebas automatizadas.
-11. Administración puede configurar festivos, días no lectivos y habilitar clases excepcionalmente; la ocupación y las reservas respetan ese calendario.
-12. Antes de usar datos reales, la responsable valida expresamente los riesgos de identificación por teléfono, el tratamiento de datos personales y el procedimiento de copias de seguridad.
+1. La propietaria instala y utiliza la PWA en un teléfono Android compatible, **sin conexión a Internet** durante la operativa normal, sin ordenador ni servidor.
+2. Al abrir la aplicación accede directamente a la gestión, sin registro, PIN, contraseña ni selección de perfiles; no existe interfaz para alumnos.
+3. Puede crear, buscar, editar y dar de baja alumnos con nombre y teléfono; se impiden nombres duplicados tras normalización y se mantienen las referencias al editar el nombre.
+4. Puede gestionar grupos, niveles, modalidades, horarios, aforos y asignaciones, y consultar en el calendario las sesiones y sus plazas disponibles.
+5. Una ausencia registrada con al menos 24 horas de antelación libera la plaza; si se intenta registrar fuera de plazo, la aplicación la rechaza con un mensaje claro.
+6. La aplicación muestra únicamente recuperaciones compatibles por nivel **y** modalidad, dentro de los siete días naturales posteriores a la clase ausente y con plazas libres; la reserva no supera el aforo.
+7. Puede registrar una ausencia sin reservar recuperación y reservarla antes de que ocurra la clase ausente; no se duplican derechos ni reservas y una recuperación confirmada no se cancela ni se cambia.
+8. Puede configurar días no lectivos o festivos y habilitar clases en ellos, con ocupación correcta.
+9. Los datos persisten tras cerrar y reabrir la aplicación y reiniciar el dispositivo. La exportación JSON, la restauración y el recordatorio semanal funcionan y se prueban de extremo a extremo.
+10. Se prueban en un teléfono Android real los flujos completos de calendario, alta de alumnos, ausencia, búsqueda de huecos, recuperación y copia de seguridad.
+11. Antes de incorporar datos reales se revisan los riesgos de privacidad, acceso al móvil, pérdida de datos y homónimos.
 
 ## Open questions
 
 ### Decisiones confirmadas
 
-1. Cada alumno dispone de un teléfono único; no se admiten números compartidos.
-2. Las recuperaciones requieren coincidencia de **nivel y modalidad**.
-3. Una recuperación confirmada no puede cancelarse; si el alumno no asiste, pierde el derecho.
-4. El administrador gestiona festivos y puede habilitar sesiones en esos días.
-5. El código de administración tendrá **10 caracteres alfanuméricos**.
-6. Se requieren copias de seguridad **semanales** mediante exportación manual de archivos JSON, con recordatorio en la aplicación.
-7. Se priorizará la compatibilidad con smartphones Android actuales, sin fijar todavía un modelo concreto.
-8. La protección de datos queda identificada como riesgo a resolver **antes de utilizar datos personales reales**.
+1. Solo la propietaria utiliza la aplicación desde su teléfono; no hay modo alumno ni autenticación en el MVP.
+2. El alumno se identifica visualmente por **nombre único** y se conserva su **número de teléfono** como dato; no se almacena correo electrónico.
+3. Las ausencias requieren 24 horas de preaviso; las recuperaciones deben coincidir en nivel y modalidad y realizarse dentro de los siete días naturales posteriores a la clase ausente.
+4. Una recuperación confirmada no puede cancelarse ni cambiarse; si no se utiliza, se pierde.
+5. La administradora gestiona festivos y puede habilitar sesiones.
+6. Copias JSON exportadas manualmente con recordatorio semanal; funcionamiento local offline.
+7. Protección de datos pendiente de revisión antes de operar con información real.
 
-### Nuevas decisiones confirmadas
+### Cuestiones pendientes
 
-1. El plazo de recuperación comienza en la fecha de la clase habitual a la que se falta y comprende los **siete días naturales posteriores**; una clase en el séptimo día está incluida.
-2. El restablecimiento del código de administrador generará un nuevo código alfanumérico de 10 caracteres y lo enviará por correo electrónico a la responsable del centro. No se mostrará el código en la aplicación.
-3. Las copias serán **archivos JSON exportados manualmente**, con recordatorio semanal y posibilidad de restauración; no se requiere envío automático a Gmail ni Drive.
-
-### Cuestiones que aún requieren precisión
-
-1. **Seguridad del restablecimiento:** determinar cómo se autoriza la solicitud y qué servicio enviará el correo, evitando que cualquier alumno pueda invalidar el código de la administradora. Se necesita Internet para el envío.
-2. **Calendario:** concretar si un festivo deshabilita por defecto las sesiones recurrentes y si el administrador puede reactivarlas individualmente.
-3. **Sesión de administración:** concretar el tiempo de cierre automático por inactividad.
-4. **Protección de datos:** resolver las medidas necesarias antes de introducir nombres y teléfonos reales.
+1. **Teléfono:** confirmar si es obligatorio para todos los alumnos o puede quedar vacío.
+2. **Festivos:** confirmar si las sesiones recurrentes se suspenden por defecto en un día marcado no lectivo y se reactivan individualmente.
+3. **Correcciones:** definir si la administradora puede revertir errores de registro incluso cuando una recuperación ya está confirmada, y bajo qué condiciones, sin convertirlo en una cancelación ordinaria.
+4. **Privacidad y seguridad del dispositivo:** definir medidas mínimas antes de introducir datos reales (bloqueo del teléfono, copias y protección de los archivos exportados).
+5. **Homónimos:** aceptar expresamente el rechazo de alumnos con el mismo nombre o definir más adelante un identificador visible alternativo.
 
 ---
 
-**Decisión de alcance:** este documento describe el resultado deseado y los criterios de aceptación. La elección de librerías, estructura del código, almacenamiento concreto y tareas de implementación corresponde a la especificación y al plan técnico posteriores.
+**Decisión de alcance:** este documento define el resultado esperado y sus criterios de aceptación. La elección de librerías, almacenamiento y tareas de implementación se abordará en la especificación y el plan técnico.
