@@ -6,7 +6,7 @@
 - **Nombres homónimos:** el requisito actual rechaza nombres repetidos tras normalizar espacios y mayúsculas/minúsculas. La responsable del centro debe confirmar que esto es aceptable.
 - **Privacidad:** nombre y teléfono son datos personales. Antes de cargar datos reales, deben revisarse las medidas de protección; los datos de desarrollo serán ficticios.
 - **Fechas y zona horaria:** la regla de 24 horas se mide respecto al inicio de la sesión y el plazo de recuperación usa días naturales. Conviene confirmar la zona horaria oficial del centro antes de fijar estos cálculos en producción.
-- **Mockups:** la guía del Día 3 pide preparar tres mockups y escoger uno. Este archivo documenta requisitos y diseño textual; queda pendiente completar esa elección visual antes de Build.
+- **Elección visual:** las tres propuestas del dashboard están en `docs/mockups/` con sus capturas. Falta escoger una antes de Build.
 
 **Estado:** borrador de requisitos y diseño basado en `docs/intent.md`. Las decisiones pendientes requieren validación con la responsable del centro.
 
@@ -131,6 +131,22 @@ La navegación principal mantiene pocas secciones y es consistente en todas las 
 
 En móvil se prioriza una columna con tarjetas de sesión. En pantallas más anchas, la agenda puede aprovechar dos columnas para calendario y detalle sin cambiar las acciones ni ocultar información operativa.
 
+### Propuestas de dashboard
+
+- [Agenda del día](mockups/agenda-dia.html) · [captura de escritorio](mockups/agenda-dia.png) · [captura móvil](mockups/agenda-dia-movil.png): agenda cronológica con cambios del día a la vista.
+- [Vista semanal](mockups/semana.html) · [captura de escritorio](mockups/semana.png) · [captura móvil](mockups/semana-movil.png): calendario de siete días para comparar sesiones y ocupación.
+- [Plazas disponibles](mockups/plazas.html) · [captura de escritorio](mockups/plazas.png) · [captura móvil](mockups/plazas-movil.png): ocupación numérica como foco principal, con ausencias y recuperaciones al lado.
+
+Las tres propuestas usan los mismos datos ficticios y el mismo sistema Regimental Blue; cambia la jerarquía y composición de la agenda.
+
+Además, el prototipo incluye una vista navegable para cada sección del MVP:
+
+- [Alumnos](mockups/alumnos.html) · [escritorio](mockups/alumnos.png) · [móvil](mockups/alumnos-movil.png)
+- [Grupos y horarios](mockups/grupos.html) · [escritorio](mockups/grupos.png) · [móvil](mockups/grupos-movil.png)
+- [Ausencias y recuperaciones](mockups/ausencias-recuperaciones.html) · [escritorio](mockups/ausencias-recuperaciones.png) · [móvil](mockups/ausencias-recuperaciones-movil.png)
+- [Calendario del centro](mockups/calendario.html) · [escritorio](mockups/calendario.png) · [móvil](mockups/calendario-movil.png)
+- [Índice de todos los mockups](mockups/index.html)
+
 ### Agenda y tarjetas de sesión
 
 - La fecha, la hora y el grupo aparecen primero.
@@ -142,6 +158,7 @@ En móvil se prioriza una columna con tarjetas de sesión. En pantallas más anc
 
 ### Lenguaje visual
 
+- La identidad visible del centro usa el nombre **Belén Pilates** y el símbolo azul y rojo de `assets/brand/logo.webp`; no se sustituye por una letra genérica.
 - Fondo cálido `#F5F1F0`, superficies blancas `#FFFFFF`, texto grafito `#252525` y bordes suaves `#D7D9DB`.
 - Azul Regimental `#426282` para navegación y acciones principales; azul profundo `#295178` para títulos y estados activos; azul apagado `#5C7998` para acciones secundarias.
 - Verde apagado para disponibilidad, gris neutro para sesiones completas, ámbar apagado para ausencias y azul para recuperaciones. Cada estado lleva además texto o icono; el color nunca es la única señal.
