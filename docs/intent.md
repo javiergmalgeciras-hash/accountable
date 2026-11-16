@@ -16,7 +16,7 @@ Una aplicación de gestión que permite a la administradora mantener el calendar
 
 ### Gestión de la administradora
 
-1. Puede crear, consultar, editar y dar de baja alumnos. Cada alumno tiene un identificador técnico estable, nombre obligatorio y único, y teléfono de contacto. Los nombres se comparan tras normalizar espacios y diferencias entre mayúsculas y minúsculas. El teléfono no es el identificador del alumno; queda pendiente decidir si es obligatorio.
+1. Puede crear, consultar, editar y dar de baja alumnos. Cada alumno tiene un identificador técnico estable, nombre obligatorio y único, y un teléfono de contacto opcional. Los nombres se comparan tras normalizar espacios y diferencias entre mayúsculas y minúsculas. El teléfono no es el identificador del alumno.
 2. Puede crear y modificar grupos con nivel, modalidad, horario, recurrencia, aforo y alumnos asignados.
 3. Puede consultar sesiones por fecha, grupo, alumnos asignados, ausencias, recuperaciones, ocupación y plazas libres.
 4. Cuando un alumno comunica una ausencia, la administradora registra el alumno y la clase afectada. Se exige un mínimo de 24 horas antes del inicio de la clase y, al registrarla, se libera la plaza correspondiente.
@@ -62,7 +62,7 @@ La interfaz conserva la identidad Regimental Blue de .agents/skills/brand/SKILL.
 
 ## Alcance y restricciones funcionales
 
-- Nombre de alumno obligatorio y único; teléfono de contacto. La obligatoriedad del teléfono queda pendiente.
+- Nombre de alumno obligatorio y único; teléfono de contacto opcional.
 - Ausencias con un mínimo de 24 horas de antelación respecto al inicio de la clase.
 - Recuperaciones con plaza libre, mismo nivel y modalidad, dentro de los siete días naturales posteriores a la clase original; se permite reservar antes de que ocurra esa clase.
 - Una recuperación confirmada no se puede cancelar.
@@ -88,10 +88,9 @@ La interfaz conserva la identidad Regimental Blue de .agents/skills/brand/SKILL.
 
 ## Decisiones pendientes
 
-1. **Teléfono:** confirmar si es obligatorio o puede quedar vacío.
-2. **Festivos:** decidir si las sesiones recurrentes se suspenden por defecto y cómo se reactivan.
-3. **Correcciones:** definir cuándo puede revertirse un error administrativo que afecta una recuperación confirmada.
-4. **Derecho de recuperación:** confirmar si cada ausencia genera como máximo una recuperación y qué ocurre si no se utiliza.
-5. **Homónimos:** se mantiene el requisito de nombre único; validar con la responsable si el rechazo de nombres repetidos es aceptable para el centro.
-6. **Privacidad:** revisar las medidas de protección de datos antes de usar información real.
-7. **Copias JSON:** reevaluar después del MVP; no son requisito de la primera versión.
+1. **Festivos:** decidir si las sesiones recurrentes se suspenden por defecto y cómo se reactivan.
+2. **Correcciones:** definir cuándo puede revertirse un error administrativo que afecta una recuperación confirmada.
+3. **Derecho de recuperación:** confirmar si cada ausencia genera como máximo una recuperación y qué ocurre si no se utiliza.
+4. **Homónimos:** se mantiene el requisito de nombre único; validar con la responsable si el rechazo de nombres repetidos es aceptable para el centro.
+5. **Privacidad:** revisar las medidas de protección de datos antes de usar información real.
+6. **Copias JSON:** reevaluar después del MVP; no son requisito de la primera versión.
