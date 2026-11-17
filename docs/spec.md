@@ -6,7 +6,7 @@
 - **Nombres homónimos:** el requisito actual rechaza nombres repetidos tras normalizar espacios y mayúsculas/minúsculas. La responsable del centro debe confirmar que esto es aceptable.
 - **Privacidad:** nombre y teléfono son datos personales. Antes de cargar datos reales, deben revisarse las medidas de protección; los datos de desarrollo serán ficticios.
 - **Fechas y zona horaria:** la regla de 24 horas se mide respecto al inicio de la sesión y el plazo de recuperación usa días naturales. Conviene confirmar la zona horaria oficial del centro antes de fijar estos cálculos en producción.
-- **Elección visual:** las tres propuestas del dashboard están en `docs/mockups/` con sus capturas. Falta escoger una antes de Build.
+- **Elección visual:** se eligió **Agenda del día** (`docs/mockups/agenda-dia.html`) para el MVP: presenta primero las clases cronológicas y conserva el cambio a vista semanal.
 
 **Estado:** borrador de requisitos y diseño basado en `docs/intent.md`. Las decisiones pendientes requieren validación con la responsable del centro.
 
