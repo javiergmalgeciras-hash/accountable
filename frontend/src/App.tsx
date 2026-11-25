@@ -47,12 +47,12 @@ export default function App() {
       <main className="main-area">
         <header className="topbar">
           <div className="global-search-wrap">
-            <label className="search-box"><span className="search-icon" aria-hidden="true" /><input aria-label="Buscar alumno" placeholder="Buscar alumno" value={search} onFocus={() => setPage('students')} onChange={(event) => { setSearch(event.target.value); setPage('students'); }} /><kbd>⌕</kbd></label>
+          <label className="search-box"><span className="search-icon" aria-hidden="true" /><input aria-label="Buscar alumno" placeholder="Buscar alumno" value={search} onFocus={() => setPage('students')} onChange={(event) => { setSearch(event.target.value); setPage('students'); }} /></label>
             {search.trim() && <div className="search-results" role="listbox" aria-label="Resultados de alumnos">{matches.length ? matches.map((student) => <button key={student.id} role="option" type="button" onClick={() => { setSearch(student.name); setPage('students'); }}><strong>{student.name}</strong><span>{student.phone || 'Sin teléfono'}</span></button>) : <p>No se encontraron alumnos.</p>}</div>}
           </div>
           <div className="admin-chip"><img src="/assets/brand/logo.webp" alt="" /><span><strong>Belén Pilates</strong><small>Administración</small></span></div>
         </header>
-        {page === 'agenda' && <AgendaPage selectedDate={selectedDate} view={agendaView} onDateChange={setSelectedDate} onViewChange={setAgendaView} />}
+        {page === 'agenda' && <AgendaPage selectedDate={selectedDate} view={agendaView} onDateChange={setSelectedDate} onViewChange={setAgendaView} onOpenAbsences={() => setPage('absences')} />}
         {page === 'students' && <StudentsPage search={search} />}
         {page === 'groups' && <GroupsPage />}
         {page === 'absences' && <AbsencesPage />}

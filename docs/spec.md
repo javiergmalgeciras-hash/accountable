@@ -49,8 +49,8 @@ El MVP inicial sigue la fase Semana 1, Día 3 del curso: React, Vite y TypeScrip
 | RF-01 | La administradora puede crear, consultar, editar y dar de baja un alumno. Cada alumno tiene un identificador estable, un nombre obligatorio y único, y un teléfono de contacto opcional. |
 | RF-02 | La unicidad del nombre se comprueba sin distinguir mayúsculas/minúsculas y normalizando espacios. Editar el nombre no cambia el identificador ni rompe referencias desde grupos, ausencias o recuperaciones. |
 | RF-03 | La administradora puede buscar alumnos por nombre y asignarlos o retirarlos de grupos. La búsqueda por teléfono no es requisito. |
-| RF-04 | La administradora puede crear y modificar grupos con nombre, nivel, modalidad, horario, recurrencia, aforo y alumnos asignados. |
-| RF-05 | La agenda permite consultar sesiones por fecha y grupo, con horario, nivel, modalidad, lista de alumnos asignados, ausencias, recuperaciones, ocupación y plazas libres. |
+| RF-04 | La administradora puede crear y modificar grupos con nombre, nivel, modalidad, aforo y alumnos asignados. Cada grupo tiene uno o más días de clase por semana, y cada día seleccionado tiene una hora de inicio y una duración independientes. |
+| RF-05 | La agenda permite consultar sesiones por fecha y grupo, con hora de inicio y fin, nivel, modalidad, lista de alumnos asignados, ausencias, recuperaciones, ocupación y plazas libres. |
 | RF-06 | La ocupación se calcula con las asignaciones vigentes, descontando las ausencias registradas y sumando las recuperaciones confirmadas. En ningún caso puede superar el aforo. |
 | RF-07 | La administradora puede registrar una ausencia para un alumno asignado a una sesión. Se acepta solo si se registra al menos 24 horas antes del inicio. Al aceptarla, la plaza queda libre. Si no cumple el plazo, se rechaza y se explica el motivo. |
 | RF-08 | Una ausencia comunicada antes de la sesión original puede tener una recuperación reservada por adelantado. La sesión alternativa debe tener plaza y coincidir en nivel y modalidad con la sesión original. |
@@ -73,13 +73,16 @@ El MVP inicial sigue la fase Semana 1, Día 3 del curso: React, Vite y TypeScrip
 ## 5. Modelo de información
 
 - **Alumno:** ID estable, nombre visible, nombre normalizado para comprobar unicidad, teléfono opcional y estado de alta/baja.
-- **Grupo:** ID, nombre, nivel, modalidad, horario habitual, recurrencia y aforo.
+- **Grupo:** ID, nombre, nivel, modalidad, aforo y alumnos asignados.
+- **Horario semanal de grupo:** una fila por cada día seleccionado, con el día de la semana, la hora de inicio y la duración en minutos. Un grupo tiene como máximo un horario por día.
 - **Asignación:** relación entre alumno y grupo. Permite mostrar participantes y calcular ocupación.
-- **Sesión:** ID, grupo, fecha y hora de inicio, aforo aplicable y estado de disponibilidad en el calendario. Representa una clase concreta del grupo.
+- **Sesión:** ID, grupo, fecha, hora de inicio y duración, aforo aplicable y estado de disponibilidad en el calendario. Representa una clase concreta del grupo.
 - **Ausencia:** ID, alumno, sesión original, fecha/hora de registro y estado. Al registrarla, reduce la ocupación de esa sesión.
 - **Recuperación:** ID, ausencia que la origina, sesión alternativa y estado de reserva. Una reserva confirmada incrementa la ocupación de la sesión alternativa.
 - **Día de calendario:** fecha y estado lectivo/no lectivo, con las sesiones habilitadas que correspondan.
 - **Configuración del centro:** parámetros estrictamente necesarios para el calendario; no se crean opciones para resolver reglas que siguen pendientes.
+
+Los horarios y sesiones creados antes de guardar duraciones conservan ese dato como no especificado. La interfaz los identifica como pendientes y no les asigna una duración inventada; al añadir días nuevos, la duración sí es obligatoria.
 
 El nombre es un dato editable; las referencias históricas se mantienen mediante IDs. La baja de un alumno debe conservar la integridad de sus asignaciones y registros existentes. La política de conservación o borrado de datos personales se revisará antes de usar datos reales.
 
@@ -90,6 +93,13 @@ El nombre es un dato editable; las referencias históricas se mantienen mediante
 1. La administradora abre **Alumnos** y busca por nombre para detectar un registro existente.
 2. Crea el alumno con nombre y, si dispone de él, teléfono; valida el nombre normalizado y asigna grupos.
 3. Puede editar los datos o dar de baja al alumno. Los registros históricos siguen apuntando al mismo ID.
+
+### Crear y editar grupos
+
+1. La administradora indica nombre, nivel, modalidad, aforo y alumnos asignados.
+2. Selecciona uno o más días de la semana y establece la hora de inicio y la duración de cada día por separado. Puede seleccionar todos los días o de lunes a viernes, y copiar el horario de un día a los demás seleccionados antes de ajustar cada uno.
+3. La aplicación genera una sesión semanal por cada día seleccionado durante las próximas seis semanas.
+4. Al editar el horario, las sesiones futuras generadas sin reservas se regeneran según la recurrencia. Las sesiones habilitadas manualmente y las vinculadas a ausencias o recuperaciones conservan su ID, fecha, hora, duración y vínculos para no alterar registros ya realizados.
 
 ### Consulta de agenda
 
@@ -125,11 +135,20 @@ La navegación principal mantiene pocas secciones y es consistente en todas las 
 
 1. **Agenda / Inicio:** vista diaria predeterminada, acceso a la semana, navegación entre fechas y lista de sesiones.
 2. **Alumnos:** búsqueda por nombre, ficha compacta, formulario de alta/edición y gestión de asignaciones.
-3. **Grupos y horarios:** lista de grupos y formulario para nivel, modalidad, recurrencia, aforo y participantes.
+3. **Grupos y horarios:** lista de grupos y formulario para nivel, modalidad, días y horarios semanales independientes (hora de inicio y duración), aforo y participantes.
 4. **Ausencias y recuperaciones:** acciones desde la sesión y consulta de reservas y su estado.
 5. **Calendario del centro:** gestión de festivos, días no lectivos y sesiones habilitadas.
 
 En móvil se prioriza una columna con tarjetas de sesión. En pantallas más anchas, la agenda puede aprovechar dos columnas para calendario y detalle sin cambiar las acciones ni ocultar información operativa.
+
+### Grupos y horarios semanales
+
+- El formulario permite seleccionar uno o varios días de lunes a domingo, además de atajos para seleccionar todos los días o de lunes a viernes.
+- Cada día seleccionado muestra campos propios para la hora de inicio y la duración de la clase, expresada en minutos.
+- La administradora puede copiar la hora de inicio y la duración de un día al resto de los días seleccionados y seguir editando cada día por separado.
+- El formulario y la ficha del grupo resumen el horario como un intervalo por día, calculado con la hora de inicio y la duración, por ejemplo: lunes 09:00–10:00, miércoles 11:00–12:00 y viernes 17:00–18:00.
+- Al guardar, las sesiones correspondientes se generan en el calendario. La edición del grupo permite cambiar sus días, horas y duraciones.
+- En móvil, los controles se presentan en una columna con objetivos táctiles cómodos; la lista de horarios no requiere desplazamiento horizontal.
 
 ### Propuestas de dashboard
 
@@ -191,7 +210,7 @@ Además, el prototipo incluye una vista navegable para cada sección del MVP:
 
 1. La aplicación local inicia con datos ficticios y permite recorrer los flujos de agenda, alumnos, grupos, ausencias, recuperaciones y días no lectivos.
 2. Crear un alumno con un nombre equivalente tras normalizar espacios y mayúsculas/minúsculas se rechaza con un mensaje claro; cambiar el nombre mantiene sus relaciones.
-3. La administradora puede crear y editar grupos, configurar horario, recurrencia, nivel, modalidad y aforo, y mantener sus alumnos asignados.
+3. La administradora puede crear y editar grupos, seleccionar varios días semanales, configurar una hora de inicio y duración distintas por día, usar los atajos de selección y copia, consultar los intervalos del resumen semanal y mantener nivel, modalidad, aforo y alumnos asignados.
 4. La agenda muestra sesiones por fecha con grupo, hora, nivel, modalidad, participantes, ocupación y plazas libres.
 5. La ocupación nunca supera el aforo; las sesiones completas se identifican con texto y número.
 6. Una ausencia justo en el límite de 24 horas se acepta y libera una plaza; una ausencia con menos de 24 horas se rechaza sin alterar la sesión.

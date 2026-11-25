@@ -60,6 +60,7 @@ def _detail(conn: Connection, session_id: int) -> dict:
     return {
         "id": row.id,
         "startsAt": to_iso(start),
+        "durationMinutes": row.duration_minutes,
         "capacity": capacity,
         "occupancy": occupied,
         "freeSeats": free,

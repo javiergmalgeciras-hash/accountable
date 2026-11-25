@@ -1,4 +1,4 @@
-import type { AbsenceRecord, CalendarDay, Group, PilatesSession, RecoveryOption, Student } from '../types';
+import type { AbsenceRecord, CalendarDay, Group, GroupInput, PilatesSession, RecoveryOption, Student } from '../types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } });
@@ -18,8 +18,8 @@ export const api = {
   updateStudent: (id: number, body: { name: string; phone: string | null; groupIds: number[] }) => request<Student>(`/students/${id}`, json('PUT', body)),
   deactivateStudent: (id: number) => request<void>(`/students/${id}`, { method: 'DELETE' }),
   groups: () => request<Group[]>('/groups'),
-  createGroup: (body: Omit<Group, 'id' | 'active'>) => request<Group>('/groups', json('POST', body)),
-  updateGroup: (id: number, body: Omit<Group, 'id' | 'active'>) => request<Group>(`/groups/${id}`, json('PUT', body)),
+  createGroup: (body: GroupInput) => request<Group>('/groups', json('POST', body)),
+  updateGroup: (id: number, body: GroupInput) => request<Group>(`/groups/${id}`, json('PUT', body)),
   sessions: (start: string, end = start, groupId?: number) => request<PilatesSession[]>(`/sessions?start=${start}&end=${end}${groupId ? `&group_id=${groupId}` : ''}`),
   session: (id: number) => request<PilatesSession>(`/sessions/${id}`),
   absences: () => request<AbsenceRecord[]>('/absences'),

@@ -26,7 +26,7 @@ describe('tarjeta de sesión', () => {
     expect(screen.getByText('Reformer · Inicial')).toBeInTheDocument();
     expect(screen.getByText('Grupo mañana · 1 alumno asignado')).toBeInTheDocument();
     expect(screen.getByText('6 de 8')).toBeInTheDocument();
-    expect(screen.getAllByText('2 plazas libres')).toHaveLength(2);
+    expect(screen.getAllByText('2 plazas libres')).toHaveLength(1);
   });
 
   it('distingue las ausencias y las recuperaciones y permite consultar participantes', () => {

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api/client';
-import { dateKey, formatDateTime, shiftDate } from '../domain/dates';
+import { dateKey, shiftDate } from '../domain/dates';
+import { formatSessionDateInterval } from '../domain/schedules';
 import type { CalendarDay, Group, PilatesSession } from '../types';
 
 export function CalendarPage() {
@@ -51,7 +52,16 @@ export function CalendarPage() {
           <section className="panel form-panel"><h2>Marcar día no lectivo</h2><form onSubmit={(event) => void markDay(event)}><label htmlFor="calendar-day">Fecha</label><input id="calendar-day" type="date" required value={day} onChange={(event) => setDay(event.target.value)} /><label htmlFor="calendar-note">Nota <span className="optional">Opcional</span></label><input id="calendar-note" maxLength={200} placeholder="Por ejemplo, festivo local" value={note} onChange={(event) => setNote(event.target.value)} /><button className="button primary" type="submit">Guardar día no lectivo</button></form></section>
           <section className="panel form-panel"><h2>Habilitar sesión manual</h2><p className="form-hint">Esta acción crea una sesión concreta. No cambia automáticamente las recurrencias del grupo.</p><form onSubmit={(event) => void enableSession(event)}><label htmlFor="manual-group">Grupo</label><select id="manual-group" required value={groupId} onChange={(event) => setGroupId(Number(event.target.value))}>{groups.map((group) => <option key={group.id} value={group.id}>{group.name} · {group.level} · {group.modality}</option>)}</select><label htmlFor="manual-start">Fecha y hora</label><input id="manual-start" type="datetime-local" step={1800} required value={startsAt} onChange={(event) => setStartsAt(event.target.value)} /><button className="button secondary" type="submit" disabled={groups.length === 0}>Habilitar sesión</button></form></section>
         </div>
-        <section className="panel calendar-panel"><h2>Días no lectivos y sesiones</h2>{days.length === 0 && <p className="muted">No hay días no lectivos marcados para este periodo.</p>}{days.map((item) => <article className="calendar-day-item" key={item.date}><div className="calendar-day-heading"><div><strong>{new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${item.date}T12:00:00`))}</strong>{item.note && <span>{item.note}</span>}</div><span className="status-pill absence">No lectivo</span></div><ul>{sessions.filter((session) => session.startsAt.startsWith(item.date)).map((session) => <li key={session.id}><span>{formatDateTime(session.startsAt)} · {session.group.name}</span><span>{session.manual ? 'Habilitada manualmente' : 'Sesión recurrente'} · {session.occupancy} de {session.capacity}</span></li>)}</ul></article>)}
+        <section className="panel calendar-panel">
+          <h2>Días no lectivos y sesiones</h2>
+          {days.length === 0 && <p className="muted">No hay días no lectivos marcados para este periodo.</p>}
+          {days.map((item) => <article className="calendar-day-item" key={item.date}>
+            <div className="calendar-day-heading"><div><strong>{new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${item.date}T12:00:00`))}</strong>{item.note && <span>{item.note}</span>}</div><span className="status-pill absence">No lectivo</span></div>
+            <ul>{sessions.filter((session) => session.startsAt.startsWith(item.date)).map((session) => <li key={session.id}>
+              <span>{formatSessionDateInterval(session.startsAt, session.durationMinutes)} · {session.group.name}</span>
+              <span>{session.manual ? 'Habilitada manualmente' : 'Sesión recurrente'} · {session.occupancy} de {session.capacity}</span>
+            </li>)}</ul>
+          </article>)}
         </section>
       </div>
     </div>

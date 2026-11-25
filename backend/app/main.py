@@ -35,12 +35,19 @@ class StudentInput(BaseModel):
     groupIds: list[int] = Field(default_factory=list)
 
 
+class WeeklyScheduleInput(BaseModel):
+    weekday: int
+    startTime: str
+    durationMinutes: int | None = None
+
+
 class GroupInput(BaseModel):
     name: str
     level: str
     modality: str
-    weekday: int
-    startTime: str
+    weeklySchedule: list[WeeklyScheduleInput] | None = None
+    weekday: int | None = None
+    startTime: str | None = None
     recurrence: str = "Semanal"
     capacity: int
     studentIds: list[int] = Field(default_factory=list)

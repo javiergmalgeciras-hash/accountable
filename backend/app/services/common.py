@@ -1,5 +1,6 @@
-from datetime import date, datetime, time, timedelta
+import os
 import re
+from datetime import date, datetime, time, timedelta
 from threading import RLock
 
 from sqlalchemy import Engine
@@ -32,6 +33,10 @@ def as_local(value: datetime) -> datetime:
 
 
 def now_local() -> datetime:
+    # A test-only override keeps API and seed data on the same controlled clock.
+    test_now = os.getenv("PILATES_TEST_NOW")
+    if test_now:
+        return as_local(datetime.fromisoformat(test_now)).replace(microsecond=0)
     return datetime.now().replace(microsecond=0)
 
 

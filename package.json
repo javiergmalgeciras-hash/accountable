@@ -4,7 +4,7 @@
   "workspaces": ["frontend"],
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names api,web \"uv run uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000\" \"npm run dev --workspace frontend -- --host 127.0.0.1\"",
-    "test": "npm run test:frontend && npm run test:backend && npm run test:e2e",
+    "test": "node scripts/run-tests.mjs",
     "test:frontend": "npm run test --workspace frontend",
     "test:backend": "uv run pytest",
     "test:e2e": "playwright test",

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client';
 import { availabilityLabel, occupancyLabel, sessionState } from '../domain/sessions';
+import { formatSessionDateInterval, formatSessionInterval } from '../domain/schedules';
 import type { PilatesSession } from '../types';
 
 type Props = { session: PilatesSession; onChanged: () => void };
@@ -11,7 +12,7 @@ export function SessionCard({ session, onChanged }: Props) {
   const [busyStudent, setBusyStudent] = useState<number | null>(null);
   const [error, setError] = useState('');
   const state = sessionState(session);
-  const time = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(session.startsAt));
+  const time = formatSessionInterval(session.startsAt, session.durationMinutes);
 
   async function register() {
     if (!selectedStudent) return;
@@ -39,21 +40,18 @@ export function SessionCard({ session, onChanged }: Props) {
           <span className="session-main">
             <strong>{session.group.modality} · {session.group.level}</strong>
             <span className="session-group">{session.group.name} · {session.students.length} {session.students.length === 1 ? 'alumno asignado' : 'alumnos asignados'}</span>
+            <span className={`status-pill ${state} session-availability`}>{availabilityLabel(session)}</span>
             <span className="occupancy-line">
-              <span><b>{session.occupancy} de {session.capacity}</b> ocupadas</span>
+              <span className="occupancy-copy"><b>{session.occupancy} de {session.capacity}</b> ocupadas</span>
               <span className="meter" aria-hidden="true"><span style={{ width: `${session.capacity ? (session.occupancy / session.capacity) * 100 : 0}%` }} /></span>
-              <span className="free-copy">{session.freeSeats === 0 ? 'Sin plazas libres' : `${session.freeSeats} ${session.freeSeats === 1 ? 'plaza libre' : 'plazas libres'}`}</span>
+              {session.absences.length || session.recoveries.length ? <span className="session-changes">
+                {session.absences.length > 0 && <span className="status-pill absence">{session.absences.length} {session.absences.length === 1 ? 'ausencia' : 'ausencias'}</span>}
+                {session.recoveries.length > 0 && <span className="status-pill recovery">{session.recoveries.length} {session.recoveries.length === 1 ? 'recuperación' : 'recuperaciones'}</span>}
+              </span> : <span className="session-note">{session.freeSeats === 0 ? 'Sin plazas libres' : 'Clase habitual'}</span>}
             </span>
           </span>
-          <span className={`status-pill ${state}`}>{availabilityLabel(session)}</span>
           <span className="session-mark" aria-hidden="true">{open ? '−' : '+'}</span>
         </button>
-        {(session.absences.length > 0 || session.recoveries.length > 0) && (
-          <div className="session-changes">
-            {session.absences.length > 0 && <span className="status-pill absence">{session.absences.length} {session.absences.length === 1 ? 'ausencia' : 'ausencias'}</span>}
-            {session.recoveries.length > 0 && <span className="status-pill recovery">{session.recoveries.length} {session.recoveries.length === 1 ? 'recuperación' : 'recuperaciones'}</span>}
-          </div>
-        )}
         {open && (
           <div className="session-detail">
             <h3>Alumnos de la sesión</h3>
@@ -74,7 +72,7 @@ export function SessionCard({ session, onChanged }: Props) {
       {selectedStudent && <div className="dialog-backdrop" role="presentation"><section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby={`absence-confirm-${session.id}`}>
         <h2 id={`absence-confirm-${session.id}`}>Confirmar ausencia</h2>
         <p>Se registrará la ausencia de <strong>{selectedStudent.name}</strong> en esta clase:</p>
-        <div className="confirmation-summary"><strong>{session.group.name} · {session.group.level} · {session.group.modality}</strong><span>{new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(session.startsAt))}</span><span>{occupancyLabel(session)}</span></div>
+        <div className="confirmation-summary"><strong>{session.group.name} · {session.group.level} · {session.group.modality}</strong><span>{formatSessionDateInterval(session.startsAt, session.durationMinutes)}</span><span>{occupancyLabel(session)}</span></div>
         <p>La solicitud se acepta con al menos 24 horas de antelación y libera una plaza.</p>
         <div className="form-actions"><button className="button primary" type="button" disabled={busyStudent !== null} onClick={() => void register()}>{busyStudent === selectedStudent.id ? 'Guardando…' : 'Confirmar ausencia'}</button><button className="button secondary" type="button" disabled={busyStudent !== null} onClick={() => setSelectedStudent(null)}>Volver</button></div>
       </section></div>}

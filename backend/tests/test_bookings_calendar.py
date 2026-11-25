@@ -13,8 +13,7 @@ from backend.app.services.sessions import get_session, list_sessions, occupancy
 from backend.app.tables import sessions
 
 
-def seeded(engine):
-    moment = datetime.now().replace(microsecond=0)
+def seeded(engine, moment):
     seed_data(engine, moment)
     return moment
 
@@ -28,10 +27,10 @@ def find_session(engine, day, group_id, time_starts=None):
     return found[0]
 
 
-def test_absence_accepts_exactly_24_hours_and_rejects_less_without_changing_occupancy(engine):
-    seeded(engine)
+def test_absence_accepts_exactly_24_hours_and_rejects_less_without_changing_occupancy(engine, fixed_clock):
+    seeded(engine, fixed_clock)
     group = find_group(engine, "Reformer mañana")
-    session = find_session(engine, datetime.now().date() + timedelta(days=2), group["id"], "08:30")
+    session = find_session(engine, fixed_clock.date() + timedelta(days=2), group["id"], "08:30")
     starts_at = datetime.fromisoformat(session["startsAt"])
     eligible_student = group["studentIds"][1]
     too_late_student = group["studentIds"][2]
@@ -48,10 +47,10 @@ def test_absence_accepts_exactly_24_hours_and_rejects_less_without_changing_occu
     assert all(item["studentId"] != too_late_student for item in list_absences(engine))
 
 
-def test_absence_releases_one_seat_and_recovery_uses_another(engine):
-    seeded(engine)
+def test_absence_releases_one_seat_and_recovery_uses_another(engine, fixed_clock):
+    seeded(engine, fixed_clock)
     group = find_group(engine, "Reformer mañana")
-    origin = find_session(engine, datetime.now().date() + timedelta(days=2), group["id"], "08:30")
+    origin = find_session(engine, fixed_clock.date() + timedelta(days=2), group["id"], "08:30")
     original_occupancy = origin["occupancy"]
     absence = next(item for item in list_absences(engine) if item["sessionId"] == origin["id"])
     options = eligible_recoveries(engine, absence["id"])
@@ -59,10 +58,10 @@ def test_absence_releases_one_seat_and_recovery_uses_another(engine):
     assert all(item["group"]["level"] == group["level"] for item in options)
     assert all(item["group"]["modality"] == group["modality"] for item in options)
     assert all(0 < item["freeSeats"] for item in options)
-    assert any(item["startsAt"].startswith((datetime.now().date() + timedelta(days=9)).isoformat()) for item in options)
-    assert not any(item["startsAt"].startswith((datetime.now().date() + timedelta(days=10)).isoformat()) for item in options)
+    assert any(item["startsAt"].startswith((fixed_clock.date() + timedelta(days=9)).isoformat()) for item in options)
+    assert not any(item["startsAt"].startswith((fixed_clock.date() + timedelta(days=10)).isoformat()) for item in options)
 
-    target = next(item for item in options if item["startsAt"].startswith((datetime.now().date() + timedelta(days=9)).isoformat()))
+    target = next(item for item in options if item["startsAt"].startswith((fixed_clock.date() + timedelta(days=9)).isoformat()))
     before, _ = occupancy(engine, target["id"])
     booked = book_recovery(engine, absence["id"], target["id"])
     after, _ = occupancy(engine, target["id"])
@@ -71,9 +70,9 @@ def test_absence_releases_one_seat_and_recovery_uses_another(engine):
     assert get_session(engine, origin["id"])["occupancy"] == original_occupancy
 
 
-def test_recovery_can_be_later_on_the_original_day(engine):
-    seeded(engine)
-    today = datetime.now().date()
+def test_recovery_can_be_later_on_the_original_day(engine, fixed_clock):
+    seeded(engine, fixed_clock)
+    today = fixed_clock.date()
     origin_group = find_group(engine, "Reformer mañana")
     origin = find_session(engine, today + timedelta(days=2), origin_group["id"], "08:30")
     absence = next(item for item in list_absences(engine) if item["sessionId"] == origin["id"])
@@ -85,9 +84,9 @@ def test_recovery_can_be_later_on_the_original_day(engine):
     assert any(item["id"] == target_id for item in options)
 
 
-def test_concurrent_recoveries_never_overbook_the_last_spaces(engine):
-    seeded(engine)
-    today = datetime.now().date()
+def test_concurrent_recoveries_never_overbook_the_last_spaces(engine, fixed_clock):
+    seeded(engine, fixed_clock)
+    today = fixed_clock.date()
     group = find_group(engine, "Reformer mañana")
     origin = find_session(engine, today + timedelta(days=2), group["id"], "08:30")
     starting_at = datetime.fromisoformat(origin["startsAt"])
@@ -113,9 +112,9 @@ def test_concurrent_recoveries_never_overbook_the_last_spaces(engine):
     assert occupancy(engine, target["id"])[0] == target["occupancy"] + 2
 
 
-def test_non_working_day_keeps_recurrences_and_allows_a_manual_session(engine):
-    seeded(engine)
-    target_day = datetime.now().date() + timedelta(days=14)
+def test_non_working_day_keeps_recurrences_and_allows_a_manual_session(engine, fixed_clock):
+    seeded(engine, fixed_clock)
+    target_day = fixed_clock.date() + timedelta(days=14)
     calendar_item = set_calendar_day(engine, target_day, {"isNonWorking": True, "note": "Festivo de prueba"})
     group = find_group(engine, "Reformer mañana")
     recurrent = find_session(engine, target_day, group["id"], "08:00")

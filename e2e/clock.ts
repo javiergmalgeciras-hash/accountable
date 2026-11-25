@@ -1,0 +1,1 @@
+export const TEST_NOW = '2026-11-17T12:00:00';

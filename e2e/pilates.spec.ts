@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { TEST_NOW } from './clock';
+
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date(TEST_NOW));
+});
 
 function dayKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -56,7 +61,27 @@ test('grupos guardan horario, recurrencia, aforo y cambios de participantes', as
   await page.getByLabel('Nombre del grupo').fill('Grupo e2e Jade');
   await page.getByLabel('Nivel').selectOption('Intermedio');
   await page.getByLabel('Modalidad').selectOption('Suelo');
-  await page.getByLabel('Hora').fill('10:30');
+  await page.getByRole('button', { name: 'Todos los días' }).click();
+  await expect(page.locator('.weekly-schedule-day input:checked')).toHaveCount(7);
+  await page.getByRole('button', { name: 'Lunes a viernes' }).click();
+  await expect(page.locator('.weekly-schedule-day input:checked')).toHaveCount(5);
+  const starts = page.getByLabel(/Hora de inicio/);
+  const durations = page.getByLabel('Duración (min)');
+  await expect(starts).toHaveCount(5);
+  await expect(durations).toHaveCount(5);
+  for (const [index, value] of ['09:00', '10:30', '11:00', '12:00', '17:00'].entries()) await starts.nth(index).fill(value);
+  for (const [index, value] of ['45', '60', '60', '60', '60'].entries()) await durations.nth(index).fill(value);
+  await page.getByLabel('Copiar horario de').selectOption({ label: 'Lunes' });
+  await page.getByRole('button', { name: 'Copiar al resto' }).click();
+  await expect(page.getByLabel('Hora de inicio · Martes')).toHaveValue('09:00');
+  await expect(durations.nth(1)).toHaveValue('45');
+  await starts.nth(1).fill('10:30');
+  await starts.nth(2).fill('11:00');
+  await starts.nth(3).fill('12:00');
+  await starts.nth(4).fill('17:00');
+  for (let index = 0; index < 5; index += 1) await durations.nth(index).fill('60');
+  await expect(page.locator('.weekly-schedule-summary')).toContainText('Miércoles');
+  await expect(page.locator('.weekly-schedule-summary')).toContainText('11:00–12:00');
   await page.getByLabel('Aforo').fill('2');
   await page.getByRole('checkbox', { name: 'Alumna de prueba 01' }).check();
   await page.getByRole('button', { name: 'Crear grupo' }).click();
@@ -65,14 +90,25 @@ test('grupos guardan horario, recurrencia, aforo y cambios de participantes', as
   await expect(card).toContainText('Suelo');
   await expect(card).toContainText('Semanal');
   await expect(card).toContainText('1 de 2 plazas asignadas');
+  await expect(card).toContainText('Miércoles');
+  await expect(card).toContainText('11:00–12:00');
   await card.getByRole('button', { name: 'Editar grupo' }).click();
   await page.getByRole('checkbox', { name: 'Alumna de prueba 01' }).uncheck();
   await page.getByRole('checkbox', { name: 'Alumna de prueba 02' }).check();
+  await page.getByLabel('Hora de inicio · Lunes').fill('09:30');
+  await page.locator('#group-duration-0').fill('75');
+  await page.getByLabel('Hora de inicio · Miércoles').fill('11:30');
+  await page.locator('#group-duration-2').fill('90');
+  await expect(page.locator('.weekly-schedule-summary')).toContainText('09:30–10:45');
+  await expect(page.locator('.weekly-schedule-summary')).toContainText('11:30–13:00');
   await page.getByRole('button', { name: 'Guardar cambios' }).click();
   const updated = page.locator('.group-card').filter({ hasText: 'Grupo e2e Jade' });
   await expect(updated).toContainText('Alumna de prueba 02');
+  await expect(updated).toContainText('09:30–10:45');
+  await expect(updated).toContainText('11:30–13:00');
   await updated.getByText(/sesiones próximas/).click();
-  await expect(updated.locator('li').first()).toBeVisible();
+  await expect(updated.locator('.schedule-details')).toContainText('09:30–10:45');
+  await expect(updated.locator('.schedule-details')).toContainText('11:30–13:00');
 });
 
 test('ausencia válida libera plaza y una solicitud con menos de 24 horas no cambia la sesión', async ({ page }) => {
@@ -128,10 +164,14 @@ test('recuperación incluye el séptimo día, confirma plaza y no muestra cancel
   await absence.getByRole('button', { name: 'Buscar recuperación' }).click();
   await expect(absence.getByRole('heading', { name: 'Sesiones compatibles' })).toBeVisible();
   const eligible = absence.locator('.recovery-option').filter({ hasText: 'Reformer inicial tarde' });
-  await expect(eligible.first()).toBeVisible();
-  const inclusiveDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(addDays(new Date(), 9));
-  await expect(eligible.first().locator('strong')).toContainText(inclusiveDay);
-  await eligible.first().getByRole('button', { name: 'Elegir sesión' }).click();
+  const formatDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  const inclusiveDay = formatDay.format(addDays(new Date(), 9));
+  const afterDeadlineDay = formatDay.format(addDays(new Date(), 10));
+  const inclusiveOption = eligible.filter({ hasText: inclusiveDay });
+  await expect(inclusiveOption).toHaveCount(1);
+  await expect(inclusiveOption.locator('strong')).toContainText(inclusiveDay);
+  await expect(eligible.filter({ hasText: afterDeadlineDay })).toHaveCount(0);
+  await inclusiveOption.getByRole('button', { name: 'Elegir sesión' }).click();
   await expect(page.getByRole('dialog')).toContainText('La reserva confirmada no se puede cancelar');
   await page.getByRole('button', { name: 'Confirmar reserva' }).click();
   await expect(page.getByRole('status')).toContainText('Recuperación confirmada');
@@ -144,7 +184,7 @@ test('calendario marca día no lectivo y habilita una sesión sin suspender recu
   const day = dayKey(holiday);
   await page.goto('/');
   await page.getByRole('button', { name: 'Calendario del centro' }).click();
-  await page.getByLabel('Fecha').fill(day);
+  await page.getByLabel('Fecha', { exact: true }).fill(day);
   await page.getByLabel('Nota').fill('Festivo de prueba E2E');
   await page.getByRole('button', { name: 'Guardar día no lectivo' }).click();
   await expect(page.getByRole('status')).toContainText('día quedó marcado como no lectivo');

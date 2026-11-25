@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
 import { SessionCard } from '../components/SessionCard';
 import { dateKey, formatDay, mondayOf, shiftDate } from '../domain/dates';
+import { formatSessionInterval } from '../domain/schedules';
 import type { PilatesSession } from '../types';
 
-type Props = { selectedDate: Date; view: 'day' | 'week'; onDateChange: (date: Date) => void; onViewChange: (view: 'day' | 'week') => void };
+type Props = { selectedDate: Date; view: 'day' | 'week'; onDateChange: (date: Date) => void; onViewChange: (view: 'day' | 'week') => void; onOpenAbsences: () => void };
 
-export function AgendaPage({ selectedDate, view, onDateChange, onViewChange }: Props) {
+export function AgendaPage({ selectedDate, view, onDateChange, onViewChange, onOpenAbsences }: Props) {
   const [sessions, setSessions] = useState<PilatesSession[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,12 +32,25 @@ export function AgendaPage({ selectedDate, view, onDateChange, onViewChange }: P
     result[key].push(session);
     return result;
   }, {}), [sessions]);
+  const absenceChanges = sessions.flatMap((session) => session.absences.map((change) => ({ ...change, kind: 'Ausencia' as const, session })));
+  const recoveryChanges = sessions.flatMap((session) => session.recoveries.map((change) => ({ ...change, kind: 'Recuperación' as const, session })));
+  const changes = [...absenceChanges, ...recoveryChanges];
 
   function move(amount: number) { onDateChange(shiftDate(selectedDate, view === 'week' ? amount * 7 : amount)); }
 
+  function focusSessions() {
+    const firstSession = document.querySelector<HTMLButtonElement>('.session-summary');
+    if (firstSession) {
+      firstSession.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstSession.focus({ preventScroll: true });
+    } else {
+      document.getElementById('sessions-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   const title = view === 'week'
     ? `${formatDay(start, { day: 'numeric', month: 'long' })} – ${formatDay(end, { day: 'numeric', month: 'long', year: 'numeric' })}`
-    : formatDay(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    : formatDay(selectedDate, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <div className="page-content agenda-page">
@@ -56,7 +70,7 @@ export function AgendaPage({ selectedDate, view, onDateChange, onViewChange }: P
       {view === 'day' ? (
         <>
           <section className="day-overview" aria-label="Resumen de la agenda">
-            <div className="today-label"><strong>Hoy</strong><span>{formatDay(selectedDate)}</span></div>
+            <div className="today-label"><strong>Hoy</strong><span aria-hidden="true">·</span><span>{formatDay(selectedDate)}</span></div>
             <div className="overview-stat"><strong>{sessions.length}</strong><span>clases</span></div>
             <div className="overview-stat"><strong>{free}</strong><span>plazas libres</span></div>
             <div className="overview-stat"><strong>{full}</strong><span>{full === 1 ? 'completa' : 'completas'}</span></div>
@@ -68,15 +82,9 @@ export function AgendaPage({ selectedDate, view, onDateChange, onViewChange }: P
             </section>
             <aside className="agenda-aside">
               <section className="panel changes-panel"><h2>Cambios del día</h2>
-                {sessions.flatMap((session) => [
-                  ...session.absences.map((change) => ({ ...change, kind: 'Ausencia', session })),
-                  ...session.recoveries.map((change) => ({ ...change, kind: 'Recuperación', session })),
-                ]).length === 0 ? <p className="muted">Todavía no hay ausencias ni recuperaciones.</p> : sessions.flatMap((session) => [
-                  ...session.absences.map((change) => ({ ...change, kind: 'Ausencia', session })),
-                  ...session.recoveries.map((change) => ({ ...change, kind: 'Recuperación', session })),
-                ]).map((change) => <div className="change-item" key={`${change.kind}-${change.id}`}><div><strong>{change.name}</strong><span className={`status-pill ${change.kind === 'Ausencia' ? 'absence' : 'recovery'}`}>{change.kind}</span></div><p>{change.session.group.name}<br />{new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(change.session.startsAt))}</p></div>)}
+                {changes.length === 0 ? <p className="muted">Todavía no hay ausencias ni recuperaciones.</p> : changes.map((change) => <div className="change-item" key={`${change.kind}-${change.id}`}><div><strong>{change.kind === 'Ausencia' ? 'Ausencia registrada' : 'Reserva confirmada'}</strong><span className={`status-pill ${change.kind === 'Ausencia' ? 'absence' : 'recovery'}`}>{change.kind}</span></div><p>{change.name} · {change.session.group.name}<br />Hoy, {new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(change.session.startsAt))}</p></div>)}
               </section>
-              <section className="panel legend-panel"><h2>Estados</h2><ul className="legend-list"><li><i className="available-dot" />Disponible</li><li><i className="full-dot" />Completa</li><li><i className="absence-dot" />Ausencia</li><li><i className="recovery-dot" />Recuperación</li></ul></section>
+              <section className="panel quick-access-panel"><h2>Acceso rápido</h2><div className="quick-access-actions"><button className="button secondary" type="button" onClick={focusSessions}>Registrar una ausencia</button><button className="button secondary" type="button" onClick={onOpenAbsences}>Buscar recuperación</button></div></section>
             </aside>
           </div>
         </>
@@ -87,7 +95,7 @@ export function AgendaPage({ selectedDate, view, onDateChange, onViewChange }: P
             const daySessions = grouped[dateKey(date)] ?? [];
             return <div className={`week-column ${dateKey(date) === dateKey(selectedDate) ? 'current' : ''}`} key={dateKey(date)}>
               <button className="week-day-heading" onClick={() => { onDateChange(date); onViewChange('day'); }}><strong>{formatDay(date, { weekday: 'long' })}</strong><span>{formatDay(date, { day: 'numeric', month: 'short' })}</span><small>{daySessions.length} {daySessions.length === 1 ? 'clase' : 'clases'}</small></button>
-              <div className="week-sessions">{daySessions.length ? daySessions.map((session) => <button key={session.id} className="week-session" onClick={() => { onDateChange(date); onViewChange('day'); }}><strong>{new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(session.startsAt))}</strong><span>{session.group.modality}</span><small>{session.group.level}</small><b>{session.occupancy} / {session.capacity}</b><em>{session.freeSeats === 0 ? 'Completa' : `${session.freeSeats} libres`}</em></button>) : <p className="muted">Sin sesiones</p>}</div>
+              <div className="week-sessions">{daySessions.length ? daySessions.map((session) => <button key={session.id} className="week-session" onClick={() => { onDateChange(date); onViewChange('day'); }}><strong>{formatSessionInterval(session.startsAt, session.durationMinutes)}</strong><span>{session.group.modality}</span><small>{session.group.level}</small><b>{session.occupancy} / {session.capacity}</b><em>{session.freeSeats === 0 ? 'Completa' : `${session.freeSeats} libres`}</em></button>) : <p className="muted">Sin sesiones</p>}</div>
             </div>;
           })}
         </section>

@@ -4,11 +4,13 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import delete, insert, select
 
 from backend.app.database import get_engine, upgrade_database
+from backend.app.services.common import now_local
 from backend.app.services.groups import _make_recurrence
 from backend.app.tables import (
     absences,
     calendar_days,
     group_students,
+    group_weekly_schedules,
     groups,
     recoveries,
     session_students,
@@ -18,14 +20,14 @@ from backend.app.tables import (
 
 SEED_STUDENTS = 60
 GROUPS = [
-    {"name": "Reformer mañana", "level": "Inicial", "modality": "Reformer", "capacity": 8, "count": 6, "time": "08:00"},
-    {"name": "Suelo intermedio", "level": "Intermedio", "modality": "Suelo", "capacity": 10, "count": 10, "time": "09:30"},
-    {"name": "Reformer avanzado", "level": "Avanzado", "modality": "Reformer", "capacity": 8, "count": 5, "time": "11:00"},
-    {"name": "Suelo inicial", "level": "Inicial", "modality": "Suelo", "capacity": 10, "count": 4, "time": "16:30"},
-    {"name": "Reformer intermedio", "level": "Intermedio", "modality": "Reformer", "capacity": 8, "count": 8, "time": "18:00"},
-    {"name": "Suelo noche", "level": "Intermedio", "modality": "Suelo", "capacity": 10, "count": 8, "time": "19:30"},
-    {"name": "Reformer inicial tarde", "level": "Inicial", "modality": "Reformer", "capacity": 8, "count": 5, "time": "20:00"},
-    {"name": "Reformer avanzado tarde", "level": "Avanzado", "modality": "Reformer", "capacity": 8, "count": 8, "time": "20:30"},
+    {"name": "Reformer mañana", "level": "Inicial", "modality": "Reformer", "capacity": 8, "count": 6, "time": "08:00", "duration": 60},
+    {"name": "Suelo intermedio", "level": "Intermedio", "modality": "Suelo", "capacity": 10, "count": 10, "time": "09:30", "duration": 60},
+    {"name": "Reformer avanzado", "level": "Avanzado", "modality": "Reformer", "capacity": 8, "count": 5, "time": "11:00", "duration": 60},
+    {"name": "Suelo inicial", "level": "Inicial", "modality": "Suelo", "capacity": 10, "count": 4, "time": "16:30", "duration": 60},
+    {"name": "Reformer intermedio", "level": "Intermedio", "modality": "Reformer", "capacity": 8, "count": 8, "time": "18:00", "duration": 60},
+    {"name": "Suelo noche", "level": "Intermedio", "modality": "Suelo", "capacity": 10, "count": 8, "time": "19:30", "duration": 60},
+    {"name": "Reformer inicial tarde", "level": "Inicial", "modality": "Reformer", "capacity": 8, "count": 5, "time": "20:00", "duration": 60},
+    {"name": "Reformer avanzado tarde", "level": "Avanzado", "modality": "Reformer", "capacity": 8, "count": 8, "time": "20:30", "duration": 60},
 ]
 
 
@@ -35,7 +37,7 @@ def clear_data(engine) -> None:
 
 
 def _clear(conn) -> None:
-    for table in (recoveries, absences, session_students, sessions, group_students, calendar_days, groups, students):
+    for table in (recoveries, absences, session_students, sessions, group_students, group_weekly_schedules, calendar_days, groups, students):
         conn.execute(delete(table))
 
 
@@ -44,7 +46,7 @@ def empty_data(engine) -> None:
 
 
 def seed_data(engine, now: datetime | None = None) -> None:
-    current = (now or datetime.now()).replace(tzinfo=None, microsecond=0)
+    current = (now or now_local()).replace(tzinfo=None, microsecond=0)
     today = current.date()
     with engine.begin() as conn:
         _clear(conn)
@@ -79,16 +81,19 @@ def seed_data(engine, now: datetime | None = None) -> None:
             )
             group_id = result.inserted_primary_key[0]
             group_ids.append(group_id)
+            conn.execute(
+                insert(group_weekly_schedules).values(group_id=group_id, weekday=today.weekday(), start_time=definition["time"], duration_minutes=definition["duration"])
+            )
             members = student_ids[cursor : cursor + definition["count"]]
             cursor += definition["count"]
             assigned[group_id] = members
             for student_id in members:
                 conn.execute(insert(group_students).values(group_id=group_id, student_id=student_id))
-            _make_recurrence(conn, group_id, {"weekday": today.weekday(), "start_time": definition["time"], "capacity": definition["capacity"]}, today, days=42, include_past_today=True)
+            _make_recurrence(conn, group_id, {"weekday": today.weekday(), "start_time": definition["time"], "duration_minutes": definition["duration"], "capacity": definition["capacity"]}, today, days=42, include_past_today=True)
 
         # A recovery booked on the seventh natural day after the original class.
         historical_start = datetime.combine(today - timedelta(days=7), time(9, 0))
-        historical_origin = _add_session(conn, group_ids[7], historical_start, GROUPS[7]["capacity"], assigned[group_ids[7]])
+        historical_origin = _add_session(conn, group_ids[7], historical_start, GROUPS[7]["capacity"], assigned[group_ids[7]], duration_minutes=GROUPS[7]["duration"])
         historical_absence = conn.execute(
             insert(absences).values(student_id=assigned[group_ids[7]][0], session_id=historical_origin, registered_at=historical_start - timedelta(hours=24))
         ).inserted_primary_key[0]
@@ -98,7 +103,7 @@ def seed_data(engine, now: datetime | None = None) -> None:
             start = datetime.combine(today, time.fromisoformat(definition["time"]))
             session_id = conn.execute(select(sessions.c.id).where(sessions.c.group_id == group_id, sessions.c.starts_at == start)).scalar_one_or_none()
             if session_id is None:
-                session_id = _add_session(conn, group_id, start, definition["capacity"], assigned[group_id])
+                session_id = _add_session(conn, group_id, start, definition["capacity"], assigned[group_id], duration_minutes=definition["duration"])
             if group_id == group_ids[2]:
                 conn.execute(insert(recoveries).values(absence_id=historical_absence, session_id=session_id, confirmed_at=current, status="confirmed"))
 
@@ -107,7 +112,7 @@ def seed_data(engine, now: datetime | None = None) -> None:
         near_start = near_start.replace(minute=0 if near_start.minute < 30 else 30, second=0, microsecond=0)
         if near_start <= current + timedelta(hours=12):
             near_start += timedelta(minutes=30)
-        near_session = _add_session(conn, group_ids[1], near_start, GROUPS[1]["capacity"], assigned[group_ids[1]])
+        near_session = _add_session(conn, group_ids[1], near_start, GROUPS[1]["capacity"], assigned[group_ids[1]], duration_minutes=GROUPS[1]["duration"])
         conn.execute(
             insert(absences).values(
                 student_id=assigned[group_ids[1]][0],
@@ -120,26 +125,26 @@ def seed_data(engine, now: datetime | None = None) -> None:
         # An absence is already registered for a class two days ahead; its recovery is bookable
         # through the inclusive seventh day and one session beyond that is excluded.
         origin_start = datetime.combine(today + timedelta(days=2), time(8, 30))
-        origin_id = _add_session(conn, group_ids[0], origin_start, GROUPS[0]["capacity"], assigned[group_ids[0]])
+        origin_id = _add_session(conn, group_ids[0], origin_start, GROUPS[0]["capacity"], assigned[group_ids[0]], duration_minutes=GROUPS[0]["duration"])
         pending_absence = conn.execute(
             insert(absences).values(student_id=assigned[group_ids[0]][0], session_id=origin_id, registered_at=current)
         ).inserted_primary_key[0]
         inclusive_day = today + timedelta(days=9)
         excluded_day = today + timedelta(days=10)
-        _add_session(conn, group_ids[6], datetime.combine(inclusive_day, time(16, 0)), GROUPS[6]["capacity"], assigned[group_ids[6]])
-        _add_session(conn, group_ids[6], datetime.combine(excluded_day, time(17, 0)), GROUPS[6]["capacity"], assigned[group_ids[6]])
+        _add_session(conn, group_ids[6], datetime.combine(inclusive_day, time(16, 0)), GROUPS[6]["capacity"], assigned[group_ids[6]], duration_minutes=GROUPS[6]["duration"])
+        _add_session(conn, group_ids[6], datetime.combine(excluded_day, time(17, 0)), GROUPS[6]["capacity"], assigned[group_ids[6]], duration_minutes=GROUPS[6]["duration"])
 
         holiday = today + timedelta(days=12)
         conn.execute(insert(calendar_days).values(day=holiday, is_non_working=True, note="Festivo de ejemplo"))
         manual_group = group_ids[3]
-        _add_session(conn, manual_group, datetime.combine(holiday, time(10, 0)), GROUPS[3]["capacity"], assigned[manual_group], manual=True)
+        _add_session(conn, manual_group, datetime.combine(holiday, time(10, 0)), GROUPS[3]["capacity"], assigned[manual_group], manual=True, duration_minutes=GROUPS[3]["duration"])
 
 
-def _add_session(conn, group_id: int, start: datetime, capacity: int, members: list[int], manual: bool = False) -> int:
+def _add_session(conn, group_id: int, start: datetime, capacity: int, members: list[int], manual: bool = False, duration_minutes: int | None = None) -> int:
     existing = conn.execute(select(sessions.c.id).where(sessions.c.group_id == group_id, sessions.c.starts_at == start)).scalar_one_or_none()
     if existing is not None:
         return existing
-    result = conn.execute(insert(sessions).values(group_id=group_id, starts_at=start, capacity=capacity, enabled=True, manual=manual))
+    result = conn.execute(insert(sessions).values(group_id=group_id, starts_at=start, duration_minutes=duration_minutes, capacity=capacity, enabled=True, manual=manual))
     session_id = result.inserted_primary_key[0]
     for student_id in members:
         conn.execute(insert(session_students).values(session_id=session_id, student_id=student_id))

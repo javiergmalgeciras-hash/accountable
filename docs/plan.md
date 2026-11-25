@@ -15,7 +15,7 @@ Este plan implementa el alcance de `docs/intent.md` y `docs/spec.md` en la fase 
 - `backend/app/main.py`, `backend/app/database.py` y `backend/app/tables.py`: FastAPI, conexión SQLite mediante SQLAlchemy Core y tablas del dominio.
 - `backend/app/services/`: operaciones para alumnos, grupos/asignaciones, sesiones, ausencias, recuperaciones y calendario.
 - `backend/app/seed.py`: carga de datos ficticios para desarrollo local.
-- `alembic.ini`, `alembic/env.py` y `alembic/versions/0001_initial.py`: configuración y migración inicial del esquema SQLite.
+- `alembic.ini`, `alembic/env.py` y `alembic/versions/`: configuración y migraciones del esquema SQLite.
 - `backend/tests/`: pruebas pytest de reglas, persistencia y API; cada ejecución usa su propia base SQLite.
 - `playwright.config.ts` y `e2e/`: configuración Playwright Test con Google Chrome y recorridos end-to-end del MVP.
 - `docs/STATUS.md`: registrar el avance y los comandos locales cuando la aplicación pueda ejecutarse.
@@ -28,15 +28,15 @@ Crear el workspace React/Vite y el servicio FastAPI. Añadir `npm run dev` para 
 
 ### Fase 2 — Persistencia, migración y datos de ejemplo
 
-Definir tablas y relaciones para alumnos, grupos, asignaciones, sesiones concretas, ausencias, recuperaciones, días de calendario y configuración necesaria. Crear la migración inicial con Alembic y el seed ficticio: sesiones completas y con plazas, casos antes y después del límite de ausencia, recuperaciones y días no lectivos. Añadir `npm run seed` y `npm run empty` con confirmación.
+Definir tablas y relaciones para alumnos, grupos, horarios semanales por día (día, hora de inicio y duración en minutos), asignaciones, sesiones concretas con duración, ausencias, recuperaciones, días de calendario y configuración necesaria. Crear las migraciones Alembic; al añadir los horarios por día, migrar el horario único existente de cada grupo a su tabla nueva. Mantener el seed ficticio con sesiones completas y con plazas, casos antes y después del límite de ausencia, recuperaciones y días no lectivos. Añadir `npm run seed` y `npm run empty` con confirmación.
 
 ### Fase 3 — Reglas de dominio y API
 
-Implementar y probar primero en backend la validación de nombres, asignaciones, ocupación, ausencias, compatibilidad de recuperaciones y habilitación manual de sesiones. Exponer operaciones JSON para consultar la agenda y administrar alumnos, grupos, ausencias, recuperaciones y calendario. Validar aforos en el servidor y guardar cada cambio que afecte plazas en una transacción.
+Implementar y probar primero en backend la validación de nombres, asignaciones, ocupación, ausencias, compatibilidad de recuperaciones y habilitación manual de sesiones. Validar que cada grupo tenga al menos un día semanal, una sola hora por día, una duración positiva en minutos y horas válidas; generar sesiones con hora y duración para cada día seleccionado. Exponer operaciones JSON para consultar la agenda y administrar alumnos, grupos, ausencias, recuperaciones y calendario. Validar aforos en el servidor y guardar cada cambio que afecte plazas en una transacción.
 
 ### Fase 4 — Shell de interfaz y gestión diaria
 
-Antes de construir la Agenda, escoger una de las tres propuestas de `docs/mockups/`. Crear navegación y las vistas de Agenda, Alumnos y Grupos conectadas a la API. Incluir búsqueda por nombre, teléfono opcional, asignaciones, niveles, modalidades, horario, recurrencia y aforo. Mostrar ocupación y plazas como números y texto además de color.
+Antes de construir la Agenda, escoger una de las tres propuestas de `docs/mockups/`. Crear navegación y las vistas de Agenda, Alumnos y Grupos conectadas a la API. En Grupos, permitir seleccionar varios días semanales, definir la hora de inicio y duración de cada día por separado, seleccionar todos los días o de lunes a viernes, copiar un horario a los demás días seleccionados, y mostrar un resumen semanal con intervalos. Permitir editar estos horarios en grupos existentes. Incluir búsqueda por nombre, teléfono opcional, asignaciones, niveles, modalidades y aforo. Mostrar ocupación y plazas como números y texto además de color.
 
 ### Fase 5 — Ausencias, recuperaciones y calendario
 
@@ -54,15 +54,15 @@ Completar la prueba end-to-end de cada flujo, corregir diferencias entre la inte
 - **Nombres homónimos:** la unicidad por nombre puede impedir registrar a dos alumnos con el mismo nombre. Mantener la regla especificada y mostrar un mensaje claro; la aceptación operativa sigue pendiente.
 - **Sobreocupación:** calcular ocupación en backend y actualizar ausencias/reservas de forma transaccional. No confiar en el contador del frontend para autorizar una plaza.
 - **Datos personales:** usar solo alumnos y teléfonos ficticios en el seed y las pruebas. No cargar datos reales hasta revisar privacidad y conservación.
-- **Recurrencias y sesiones concretas:** la especificación define ambos conceptos, pero no detalla toda la política de generación o actualización de sesiones futuras. Resolver el mecanismo técnico durante la implementación sin cambiar la regla pendiente para festivos.
+- **Recurrencias, duraciones antiguas y reservas:** generar una sesión semanal por cada día seleccionado y actualizar las sesiones futuras generadas sin reservas al editar un grupo. Mantener el ID, la fecha, la hora, la duración y los vínculos de sesiones manuales y de sesiones vinculadas a ausencias o recuperaciones. Las duraciones que no existían antes de la migración permanecen sin especificar; no aplicar un valor predeterminado sin aprobación. No cambiar la regla pendiente para festivos.
 
 ## Proof
 
 ### Pruebas unitarias
 
 - **Vitest — alumnos:** acepta teléfono vacío; rechaza nombre vacío y duplicados tras la normalización especificada; verifica que editar el nombre conserva el ID y las asignaciones.
-- **Vitest — grupos y agenda:** presenta nivel, modalidad, horario y aforo; muestra ocupación y plazas libres con etiquetas textuales; distingue sesiones completas, ausencias y recuperaciones.
-- **pytest — alumnos y grupos:** CRUD, teléfono opcional, unicidad normalizada, referencias por ID, asignación de alumnos y validación de aforo.
+- **Vitest — grupos y agenda:** presenta nivel, modalidad, horario y aforo; comprueba selección rápida de días, copia de hora y duración, y resumen por intervalos; muestra ocupación y plazas libres con etiquetas textuales; distingue sesiones completas, ausencias y recuperaciones.
+- **pytest — alumnos y grupos:** CRUD, teléfono opcional, unicidad normalizada, referencias por ID, asignación de alumnos, validación de aforo y generación de horarios en varios días con horas y duraciones distintas; rechaza duraciones inválidas.
 - **pytest — ocupación:** una ausencia aceptada libera una plaza; una recuperación confirmada ocupa una plaza; la ocupación no supera el aforo al competir varias reservas por las últimas plazas.
 - **pytest — ausencia:** acepta exactamente 24 horas de antelación y rechaza menos de 24 horas sin modificar la ocupación.
 - **pytest — recuperación:** filtra por mismo nivel y modalidad, plaza libre y plazo; incluye el séptimo día natural, excluye el siguiente y permite reservar antes de la sesión original si la ausencia se registró a tiempo.
@@ -73,7 +73,7 @@ Completar la prueba end-to-end de cada flujo, corregir diferencias entre la inte
 
 - **Agenda:** iniciar con el seed, cambiar entre día y semana y comprobar hora, grupo, nivel, modalidad, ocupación y plazas libres.
 - **Alumnos:** crear un alumno sin teléfono, buscarlo, editar su nombre y verificar que conserva sus grupos; intentar un nombre duplicado normalizado y comprobar el mensaje.
-- **Grupos y horarios:** crear o editar un grupo, cambiar participantes y comprobar nivel, modalidad, recurrencia, aforo y sesiones visibles.
+- **Grupos y horarios:** crear o editar un grupo, seleccionar días con los atajos, asignar horas y duraciones distintas a varios días, copiar un horario, cambiar participantes y comprobar el resumen de intervalos y las sesiones visibles.
 - **Ausencia:** registrar una ausencia elegible desde una sesión y comprobar que se libera la plaza; repetir con menos de 24 horas y comprobar que se rechaza sin cambios.
 - **Recuperación:** desde una ausencia futura válida, reservar una sesión compatible antes de la clase original; comprobar disponibilidad, fecha límite inclusiva, ocupación actualizada y que no aparezca una acción para cancelar la reserva confirmada.
 - **Calendario:** marcar un día no lectivo, habilitar manualmente una sesión y comprobar que no se aplica una regla automática pendiente.

@@ -19,6 +19,13 @@ Si los ejemplos de CRM, ERP o contabilidad de las guías del curso contradicen d
 - Usa las reglas funcionales confirmadas de docs/intent.md. Deja abiertas las decisiones que ese documento marca como pendientes; no inventes políticas para resolverlas.
 - Aplica la identidad visual de pilates sin convertir el diseño mobile-first en un requisito de PWA, instalación u operación offline.
 
+## Pruebas automatizadas
+
+- `npm test` ejecuta las suites unitarias de Vitest y pytest, y las pruebas end-to-end de Playwright. Las ejecuta en serie y continúa con las siguientes aunque una falle.
+- El comando debe terminar con código distinto de cero si falla cualquier suite. Corrige los fallos antes de dar el trabajo por validado; no omitas una suite para obtener un resultado correcto.
+- En Windows PowerShell, verifica los cambios con `npm.cmd test` desde la raíz del repositorio.
+- pytest fija `PILATES_TEST_NOW` para que los casos de fecha y hora usen datos repetibles; Playwright fija el mismo instante en el backend, el seed y el reloj del navegador.
+
 ## Método y material del curso
 
 Cuando el trabajo corresponda a una fase del curso, consulta course/for_agents/ y las instrucciones pertinentes. Conserva sus etapas de Plan, Design, Build, Test, Deploy y Maintain, sus prácticas de revisión, skills, agentes, ramas y herramientas. Las instrucciones de course/ son material del curso y no se modifican en esta adaptación.

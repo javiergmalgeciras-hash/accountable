@@ -40,6 +40,15 @@ groups = Table(
     Column("active", Boolean, nullable=False, default=True),
 )
 
+group_weekly_schedules = Table(
+    "group_weekly_schedules",
+    metadata,
+    Column("group_id", ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
+    Column("weekday", Integer, primary_key=True),
+    Column("start_time", String(5), nullable=False),
+    Column("duration_minutes", Integer),
+)
+
 group_students = Table(
     "group_students",
     metadata,
@@ -53,6 +62,7 @@ sessions = Table(
     Column("id", Integer, primary_key=True),
     Column("group_id", ForeignKey("groups.id", ondelete="RESTRICT"), nullable=False),
     Column("starts_at", DateTime(timezone=True), nullable=False),
+    Column("duration_minutes", Integer),
     Column("capacity", Integer, nullable=False),
     Column("enabled", Boolean, nullable=False, default=True),
     Column("manual", Boolean, nullable=False, default=False),

@@ -17,7 +17,7 @@ Una aplicación de gestión que permite a la administradora mantener el calendar
 ### Gestión de la administradora
 
 1. Puede crear, consultar, editar y dar de baja alumnos. Cada alumno tiene un identificador técnico estable, nombre obligatorio y único, y un teléfono de contacto opcional. Los nombres se comparan tras normalizar espacios y diferencias entre mayúsculas y minúsculas. El teléfono no es el identificador del alumno.
-2. Puede crear y modificar grupos con nivel, modalidad, horario, recurrencia, aforo y alumnos asignados.
+2. Puede crear y modificar grupos con nivel, modalidad, aforo y alumnos asignados, y configurar uno o más días de clase por semana, cada uno con su propia hora de inicio y duración.
 3. Puede consultar sesiones por fecha, grupo, alumnos asignados, ausencias, recuperaciones, ocupación y plazas libres.
 4. Cuando un alumno comunica una ausencia, la administradora registra el alumno y la clase afectada. Se exige un mínimo de 24 horas antes del inicio de la clase y, al registrarla, se libera la plaza correspondiente.
 5. Puede reservar por adelantado una recuperación para una ausencia comunicada antes de la clase original. La sesión alternativa debe tener el mismo nivel y modalidad, disponer de plaza y celebrarse dentro de los siete días naturales posteriores a la clase original. El séptimo día está incluido.
@@ -29,7 +29,7 @@ Una aplicación de gestión que permite a la administradora mantener el calendar
 
 - **Calendario / Inicio:** sesiones por fecha, grupos, ocupación y plazas disponibles.
 - **Alumnos:** alta, edición, búsqueda por nombre y asignación a grupos.
-- **Grupos y horarios:** nivel, modalidad, recurrencia, capacidad y participantes.
+- **Grupos y horarios:** nivel, modalidad, días, horas de inicio y duraciones semanales independientes, capacidad y participantes.
 - **Registrar ausencia:** selección de alumno y clase habitual, validación del preaviso y liberación de plaza.
 - **Gestionar recuperaciones:** sesiones compatibles, plazas, plazo y reservas confirmadas.
 - **Configuración del centro:** festivos y días lectivos.
@@ -37,8 +37,8 @@ Una aplicación de gestión que permite a la administradora mantener el calendar
 ### Registros del sistema
 
 - **Alumno:** identificador estable, nombre único, teléfono de contacto y asignaciones a grupos.
-- **Grupo:** nombre, nivel, modalidad, horario habitual y aforo.
-- **Sesión:** fecha y hora concretas, grupo, capacidad y ocupación calculada desde asignaciones, ausencias y recuperaciones.
+- **Grupo:** nombre, nivel, modalidad, horario semanal por día seleccionado y aforo. Cada día tiene su propia hora de inicio y duración, y genera su sesión recurrente correspondiente.
+- **Sesión:** fecha, hora de inicio y duración cuando está especificada, grupo, capacidad y ocupación calculada desde asignaciones, ausencias y recuperaciones.
 - **Ausencia:** alumno, sesión habitual afectada, fecha de registro y estado.
 - **Recuperación:** ausencia que origina la solicitud, sesión alternativa y estado.
 - **Día de calendario:** fecha lectiva o no lectiva y posibles sesiones habilitadas.
@@ -65,6 +65,10 @@ La interfaz conserva la identidad Regimental Blue de .agents/skills/brand/SKILL.
 - Nombre de alumno obligatorio y único; teléfono de contacto opcional.
 - Ausencias con un mínimo de 24 horas de antelación respecto al inicio de la clase.
 - Recuperaciones con plaza libre, mismo nivel y modalidad, dentro de los siete días naturales posteriores a la clase original; se permite reservar antes de que ocurra esa clase.
+- El horario semanal de un grupo permite seleccionar uno o varios días de lunes a domingo, seleccionar rápidamente todos los días o de lunes a viernes, y copiar la hora de inicio y duración de un día al resto de los días seleccionados. Después de copiar, cada día se puede ajustar individualmente.
+- El resumen del grupo muestra cada día con su intervalo horario. Por ejemplo: lunes 09:00–10:00, miércoles 11:00–12:00 y viernes 17:00–18:00.
+- Al crear o modificar un grupo, la aplicación genera o actualiza en el calendario las sesiones correspondientes a los días y horarios semanales configurados. Las sesiones futuras sin reservas se regeneran; las vinculadas a ausencias o recuperaciones mantienen su ID, fecha, hora, duración y vínculos para no cambiar lo ya reservado.
+- Los grupos y sesiones existentes que no tengan una duración guardada conservan ese dato como pendiente. No se les asigna un valor predeterminado inventado; la administradora puede completar la duración al editar el grupo.
 - Una recuperación confirmada no se puede cancelar.
 - La administradora gestiona festivos y puede habilitar sesiones en días no lectivos.
 - No hay autoservicio ni cuentas para alumnos, ni varios usuarios funcionales del centro.
@@ -77,7 +81,7 @@ La interfaz conserva la identidad Regimental Blue de .agents/skills/brand/SKILL.
 
 1. La administradora puede iniciar la aplicación de desarrollo con datos de ejemplo y recorrer sus flujos según el curso.
 2. Puede crear, buscar, editar y dar de baja alumnos, evitando nombres duplicados según la normalización acordada y manteniendo referencias al editar un nombre.
-3. Puede gestionar grupos, niveles, modalidades, horarios, aforos y asignaciones.
+3. Puede gestionar grupos, niveles, modalidades y horarios semanales con hora de inicio y duración independientes por día; puede seleccionar días rápidamente, copiar horarios y editarlos, consultar el resumen del grupo y generar sus sesiones en el calendario.
 4. Puede consultar sesiones y plazas disponibles en el calendario; la ocupación nunca supera el aforo.
 5. Una ausencia registrada con al menos 24 horas de antelación libera la plaza; un registro fuera de plazo se rechaza con un mensaje claro.
 6. La aplicación propone recuperaciones solo con plaza libre, nivel y modalidad coincidentes, dentro del plazo de siete días.

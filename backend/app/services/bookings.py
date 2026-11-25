@@ -45,7 +45,7 @@ def _eligible(conn: Connection, absence_id: int) -> list[dict]:
         raise DomainError("Esta ausencia no permite reservar una recuperación porque se registró fuera de plazo.")
     last_day = original_start.date() + timedelta(days=7)
     candidates = conn.execute(
-        select(sessions.c.id, sessions.c.starts_at, sessions.c.capacity, groups.c.id.label("group_id"), groups.c.name, groups.c.level, groups.c.modality)
+        select(sessions.c.id, sessions.c.starts_at, sessions.c.duration_minutes, sessions.c.capacity, groups.c.id.label("group_id"), groups.c.name, groups.c.level, groups.c.modality)
         .join(groups, groups.c.id == sessions.c.group_id)
         .where(sessions.c.enabled.is_(True), groups.c.active.is_(True), groups.c.level == origin.level, groups.c.modality == origin.modality)
         .order_by(sessions.c.starts_at)
@@ -60,6 +60,7 @@ def _eligible(conn: Connection, absence_id: int) -> list[dict]:
             result.append({
                 "id": candidate.id,
                 "startsAt": starts_at.isoformat(),
+                "durationMinutes": candidate.duration_minutes,
                 "capacity": capacity,
                 "occupancy": occupied,
                 "freeSeats": capacity - occupied,
@@ -84,6 +85,7 @@ def list_absences(engine) -> list[dict]:
                 absences.c.session_id,
                 absences.c.registered_at,
                 sessions.c.starts_at,
+                sessions.c.duration_minutes.label("session_duration_minutes"),
                 groups.c.name.label("group_name"),
                 groups.c.level,
                 groups.c.modality,
@@ -103,6 +105,7 @@ def list_absences(engine) -> list[dict]:
                 "studentName": row.student_name,
                 "sessionId": row.session_id,
                 "sessionStartsAt": as_local(row.starts_at).isoformat(),
+                "sessionDurationMinutes": row.session_duration_minutes,
                 "groupName": row.group_name,
                 "level": row.level,
                 "modality": row.modality,
