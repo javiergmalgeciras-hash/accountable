@@ -2,13 +2,12 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.engine import Connection
 
 from backend.app.services.common import MUTATION_LOCK, DomainError, clean_required, normalize_name, now_local
+from backend.app.services.sessions import occupancy_for_connection
 from backend.app.tables import absences, group_students, groups, session_students, sessions, students
 
 
 def _validate_groups(conn: Connection, student_id: int, group_ids: list[int]) -> list[int]:
     chosen = list(dict.fromkeys(group_ids))
-    if len(chosen) != len(group_ids):
-        return chosen
     rows = conn.execute(select(groups.c.id, groups.c.capacity).where(groups.c.id.in_(chosen), groups.c.active.is_(True))).all() if chosen else []
     if len(rows) != len(chosen):
         raise DomainError("Uno o más grupos ya no están disponibles.")
@@ -27,15 +26,31 @@ def _set_groups(conn: Connection, student_id: int, group_ids: list[int]) -> None
     for group_id in chosen:
         if group_id not in current:
             conn.execute(insert(group_students).values(student_id=student_id, group_id=group_id))
-    # Future rosters follow current assignments; old sessions retain their historical roster.
-    future = conn.execute(select(sessions.c.id).where(sessions.c.starts_at > now_local(), sessions.c.manual.is_(False))).scalars().all()
-    for session_id in future:
-        group_id = conn.execute(select(sessions.c.group_id).where(sessions.c.id == session_id)).scalar_one()
+    # All future sessions follow current assignments; completed sessions keep their historical roster.
+    affected_groups = current | set(chosen)
+    if not affected_groups:
+        return
+    future = conn.execute(
+        select(sessions.c.id, sessions.c.group_id, sessions.c.capacity)
+        .where(sessions.c.starts_at > now_local(), sessions.c.group_id.in_(affected_groups))
+    ).all()
+    for session_id, group_id, capacity in future:
         rostered = conn.execute(select(session_students.c.student_id).where(session_students.c.session_id == session_id, session_students.c.student_id == student_id)).first()
         if group_id in chosen and not rostered:
+            occupied, _ = occupancy_for_connection(conn, session_id, capacity)
+            if occupied >= capacity:
+                raise DomainError("Una sesión futura no tiene plazas disponibles.", 409)
             conn.execute(insert(session_students).values(session_id=session_id, student_id=student_id))
         elif group_id not in chosen and rostered:
-            conn.execute(delete(session_students).where(session_students.c.session_id == session_id, session_students.c.student_id == student_id))
+            has_absence = conn.execute(
+                select(absences.c.id).where(
+                    absences.c.session_id == session_id,
+                    absences.c.student_id == student_id,
+                    absences.c.status == "accepted",
+                )
+            ).first()
+            if not has_absence:
+                conn.execute(delete(session_students).where(session_students.c.session_id == session_id, session_students.c.student_id == student_id))
 
 
 def list_students(engine, search: str = "") -> list[dict]:
@@ -95,8 +110,8 @@ def deactivate_student(engine, student_id: int) -> dict:
             raise DomainError("No se encontró el alumno.", 404)
         conn.execute(update(students).where(students.c.id == student_id).values(active=False))
         conn.execute(delete(group_students).where(group_students.c.student_id == student_id))
-        # Only upcoming sessions lose the assignment; completed session records stay intact.
-        upcoming = conn.execute(select(sessions.c.id).where(sessions.c.starts_at > now_local(), sessions.c.manual.is_(False))).scalars().all()
+        # Upcoming sessions lose the assignment; completed session records stay intact.
+        upcoming = conn.execute(select(sessions.c.id).where(sessions.c.starts_at > now_local())).scalars().all()
         for session_id in upcoming:
             has_absence = conn.execute(select(absences.c.id).where(absences.c.session_id == session_id, absences.c.student_id == student_id, absences.c.status == "accepted")).first()
             if not has_absence:

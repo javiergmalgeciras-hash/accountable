@@ -71,12 +71,13 @@ describe('creación y edición de horarios de grupo', () => {
     expect(document.querySelectorAll('.weekly-schedule-day input:checked')).toHaveLength(5);
 
     await user.type(screen.getByLabelText('Nombre del grupo'), 'Grupo de prueba');
-    setField('Hora de inicio · Lunes', '09:00');
+    setField('Hora de inicio · Lunes', '09:15');
     setDuration(0, '60');
+    expect((screen.getByLabelText('Hora de inicio · Lunes') as HTMLInputElement).validity.stepMismatch).toBe(false);
     await user.selectOptions(screen.getByLabelText('Copiar horario de'), '0');
     await user.click(screen.getByRole('button', { name: 'Copiar al resto' }));
 
-    expect(screen.getByLabelText('Hora de inicio · Martes')).toHaveValue('09:00');
+    expect(screen.getByLabelText('Hora de inicio · Martes')).toHaveValue('09:15');
     expect(screen.getByLabelText('Duración (min)', { selector: '#group-duration-1' })).toHaveValue(60);
     setField('Hora de inicio · Martes', '10:30');
     expect(screen.getByText('10:30–11:30')).toBeInTheDocument();
@@ -85,11 +86,11 @@ describe('creación y edición de horarios de grupo', () => {
     await waitFor(() => expect(apiMock.createGroup).toHaveBeenCalledTimes(1));
     expect(apiMock.createGroup).toHaveBeenCalledWith(expect.objectContaining({
       weeklySchedule: [
-        { weekday: 0, startTime: '09:00', durationMinutes: 60 },
+        { weekday: 0, startTime: '09:15', durationMinutes: 60 },
         { weekday: 1, startTime: '10:30', durationMinutes: 60 },
-        { weekday: 2, startTime: '09:00', durationMinutes: 60 },
-        { weekday: 3, startTime: '09:00', durationMinutes: 60 },
-        { weekday: 4, startTime: '09:00', durationMinutes: 60 },
+        { weekday: 2, startTime: '09:15', durationMinutes: 60 },
+        { weekday: 3, startTime: '09:15', durationMinutes: 60 },
+        { weekday: 4, startTime: '09:15', durationMinutes: 60 },
       ],
     } satisfies Partial<GroupInput>));
   });

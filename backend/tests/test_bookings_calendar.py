@@ -36,6 +36,8 @@ def test_absence_accepts_exactly_24_hours_and_rejects_less_without_changing_occu
     too_late_student = group["studentIds"][2]
     before, _ = occupancy(engine, session["id"])
     accepted = register_absence(engine, eligible_student, session["id"], starts_at - timedelta(hours=24))
+    listed_absence = next(item for item in list_absences(engine) if item["id"] == accepted["id"])
+    assert listed_absence["deadline"] == (starts_at.date() + timedelta(days=7)).isoformat()
     after_accept, _ = occupancy(engine, session["id"])
     assert accepted["studentId"] == eligible_student
     assert after_accept == before - 1
@@ -84,6 +86,22 @@ def test_recovery_can_be_later_on_the_original_day(engine, fixed_clock):
     assert any(item["id"] == target_id for item in options)
 
 
+def test_recovery_options_and_booking_exclude_past_sessions(engine, fixed_clock):
+    seeded(engine, fixed_clock)
+    today = fixed_clock.date()
+    group = find_group(engine, "Reformer avanzado tarde")
+    origin = find_session(engine, today - timedelta(days=7), group["id"], "09:00")
+    absence = next(item for item in list_absences(engine) if item["sessionId"] == origin["id"])
+    target_start = datetime.combine(today - timedelta(days=1), datetime.min.time()).replace(hour=10)
+    with engine.begin() as conn:
+        target_id = _add_session(conn, group["id"], target_start, group["capacity"], group["studentIds"])
+
+    options = eligible_recoveries(engine, absence["id"])
+    assert all(item["id"] != target_id for item in options)
+    with pytest.raises(DomainError, match="no tiene plaza o no cumple"):
+        book_recovery(engine, absence["id"], target_id)
+
+
 def test_concurrent_recoveries_never_overbook_the_last_spaces(engine, fixed_clock):
     seeded(engine, fixed_clock)
     today = fixed_clock.date()
@@ -120,7 +138,9 @@ def test_non_working_day_keeps_recurrences_and_allows_a_manual_session(engine, f
     recurrent = find_session(engine, target_day, group["id"], "08:00")
     assert calendar_item["isNonWorking"] is True
     assert recurrent["enabled"] is True
-    manual = enable_manual_session(engine, {"groupId": group["id"], "startsAt": datetime.combine(target_day, datetime.min.time()).replace(hour=12).isoformat()})
+    manual = enable_manual_session(engine, {"groupId": group["id"], "startsAt": datetime.combine(target_day, datetime.min.time()).replace(hour=12, minute=15).isoformat()})
     assert manual["manual"] is True
     assert manual["enabled"] is True
+    assert manual["durationMinutes"] == 60
+    assert manual["startsAt"].startswith(f"{target_day.isoformat()}T12:15")
     assert len(list_sessions(engine, target_day, target_day, group["id"])) == 2

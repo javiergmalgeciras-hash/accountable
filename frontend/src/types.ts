@@ -17,7 +17,7 @@ export type PilatesSession = {
 };
 export type AbsenceRecord = {
   id: number; studentId: number; studentName: string; sessionId: number; sessionStartsAt: string; sessionDurationMinutes?: number | null;
-  groupName: string; level: string; modality: string; registeredAt: string; recoveryCount: number;
+  groupName: string; level: string; modality: string; registeredAt: string; recoveryCount: number; deadline: string;
 };
 export type RecoveryOption = {
   id: number; startsAt: string; durationMinutes?: number | null; capacity: number; occupancy: number; freeSeats: number; deadline: string;

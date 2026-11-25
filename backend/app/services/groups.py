@@ -62,8 +62,6 @@ def _validate(payload: dict, student_count: int, *, legacy_duration_days: set[in
 
 def _student_ids(conn, ids: list[int]) -> list[int]:
     chosen = list(dict.fromkeys(ids))
-    if len(chosen) != len(ids):
-        return chosen
     found = conn.execute(select(students.c.id).where(students.c.id.in_(chosen), students.c.active.is_(True))).scalars().all() if chosen else []
     if len(found) != len(chosen):
         raise DomainError("Uno o más alumnos no están disponibles.")
@@ -162,7 +160,7 @@ def update_group(engine, group_id: int, payload: dict) -> dict:
         if not existing_schedule:
             legacy_duration_days.add(existing.weekday)
         values = _validate(payload, len(chosen), legacy_duration_days=legacy_duration_days)
-        occupancy_query = select(sessions.c.id, sessions.c.capacity).where(sessions.c.group_id == group_id, sessions.c.starts_at > now_local(), sessions.c.manual.is_(False))
+        occupancy_query = select(sessions.c.id, sessions.c.capacity).where(sessions.c.group_id == group_id, sessions.c.starts_at > now_local())
         for session_id, _capacity in conn.execute(occupancy_query):
             occupied, _ = occupancy(engine, session_id, conn=conn)
             if occupied > values["capacity"]:
@@ -187,7 +185,7 @@ def update_group(engine, group_id: int, payload: dict) -> dict:
             conn.execute(delete(session_students).where(session_students.c.session_id == session_id))
             conn.execute(delete(sessions).where(sessions.c.id == session_id))
         _make_recurrence(conn, group_id, values, now_local().date())
-        upcoming = conn.execute(select(sessions.c.id).where(sessions.c.group_id == group_id, sessions.c.starts_at > now_local(), sessions.c.manual.is_(False))).scalars().all()
+        upcoming = conn.execute(select(sessions.c.id).where(sessions.c.group_id == group_id, sessions.c.starts_at > now_local())).scalars().all()
         for session_id in upcoming:
             conn.execute(update(sessions).where(sessions.c.id == session_id).values(capacity=values["capacity"]))
             refresh_roster(conn, session_id, chosen)

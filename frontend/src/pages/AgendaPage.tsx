@@ -15,6 +15,7 @@ export function AgendaPage({ selectedDate, view, onDateChange, onViewChange, onO
   const end = view === 'week' ? shiftDate(start, 6) : selectedDate;
   const startKey = dateKey(start);
   const endKey = dateKey(end);
+  const isSelectedDateToday = dateKey(selectedDate) === dateKey(new Date());
 
   async function load() {
     setLoading(true);
@@ -70,7 +71,7 @@ export function AgendaPage({ selectedDate, view, onDateChange, onViewChange, onO
       {view === 'day' ? (
         <>
           <section className="day-overview" aria-label="Resumen de la agenda">
-            <div className="today-label"><strong>Hoy</strong><span aria-hidden="true">·</span><span>{formatDay(selectedDate)}</span></div>
+            <div className="today-label"><strong>{isSelectedDateToday ? 'Hoy' : 'Fecha seleccionada'}</strong><span aria-hidden="true">·</span><span>{formatDay(selectedDate)}</span></div>
             <div className="overview-stat"><strong>{sessions.length}</strong><span>clases</span></div>
             <div className="overview-stat"><strong>{free}</strong><span>plazas libres</span></div>
             <div className="overview-stat"><strong>{full}</strong><span>{full === 1 ? 'completa' : 'completas'}</span></div>
@@ -82,7 +83,13 @@ export function AgendaPage({ selectedDate, view, onDateChange, onViewChange, onO
             </section>
             <aside className="agenda-aside">
               <section className="panel changes-panel"><h2>Cambios del día</h2>
-                {changes.length === 0 ? <p className="muted">Todavía no hay ausencias ni recuperaciones.</p> : changes.map((change) => <div className="change-item" key={`${change.kind}-${change.id}`}><div><strong>{change.kind === 'Ausencia' ? 'Ausencia registrada' : 'Reserva confirmada'}</strong><span className={`status-pill ${change.kind === 'Ausencia' ? 'absence' : 'recovery'}`}>{change.kind}</span></div><p>{change.name} · {change.session.group.name}<br />Hoy, {new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(change.session.startsAt))}</p></div>)}
+                {changes.length === 0 ? <p className="muted">Todavía no hay ausencias ni recuperaciones.</p> : changes.map((change) => {
+                  const changeDate = new Date(change.session.startsAt);
+                  const dateLabel = dateKey(changeDate) === dateKey(new Date())
+                    ? 'Hoy'
+                    : formatDay(changeDate, { weekday: 'short', day: 'numeric', month: 'short' });
+                  return <div className="change-item" key={`${change.kind}-${change.id}`}><div><strong>{change.kind === 'Ausencia' ? 'Ausencia registrada' : 'Reserva confirmada'}</strong><span className={`status-pill ${change.kind === 'Ausencia' ? 'absence' : 'recovery'}`}>{change.kind}</span></div><p>{change.name} · {change.session.group.name}<br />{dateLabel}, {new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(changeDate)}</p></div>;
+                })}
               </section>
               <section className="panel quick-access-panel"><h2>Acceso rápido</h2><div className="quick-access-actions"><button className="button secondary" type="button" onClick={focusSessions}>Registrar una ausencia</button><button className="button secondary" type="button" onClick={onOpenAbsences}>Buscar recuperación</button></div></section>
             </aside>

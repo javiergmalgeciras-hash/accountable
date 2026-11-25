@@ -5,7 +5,7 @@ from sqlalchemy import insert, select, update
 from backend.app.services.common import MUTATION_LOCK, DomainError
 from backend.app.services.groups import _make_session
 from backend.app.services.sessions import _detail
-from backend.app.tables import calendar_days, groups, sessions
+from backend.app.tables import calendar_days, group_weekly_schedules, groups, sessions
 
 
 def list_calendar(engine, start: date, end: date) -> list[dict]:
@@ -37,8 +37,8 @@ def enable_manual_session(engine, payload: dict) -> dict:
         starts_at = starts_at.astimezone().replace(tzinfo=None) if starts_at.tzinfo else starts_at
     except (KeyError, ValueError) as exc:
         raise DomainError("Indica una fecha y hora válidas para la sesión.") from exc
-    if starts_at.minute not in (0, 30) or starts_at.second or starts_at.microsecond:
-        raise DomainError("El horario de la sesión debe terminar en :00 o :30.")
+    if starts_at.second or starts_at.microsecond:
+        raise DomainError("La hora debe tener precisión de minutos.")
     with MUTATION_LOCK, engine.begin() as conn:
         day = conn.execute(select(calendar_days).where(calendar_days.c.day == starts_at.date())).mappings().first()
         if not day or not day.is_non_working:
@@ -48,6 +48,13 @@ def enable_manual_session(engine, payload: dict) -> dict:
             raise DomainError("No se encontró el grupo.", 404)
         if conn.execute(select(sessions.c.id).where(sessions.c.group_id == group_id, sessions.c.starts_at == starts_at)).first():
             raise DomainError("Ya existe una sesión de este grupo en esa fecha y hora.", 409)
-        session_id = _make_session(conn, group_id, starts_at, group_row.capacity, manual=True)
+        schedule = conn.execute(
+            select(group_weekly_schedules.c.duration_minutes).where(
+                group_weekly_schedules.c.group_id == group_id,
+                group_weekly_schedules.c.weekday == starts_at.weekday(),
+            )
+        ).first()
+        duration_minutes = schedule.duration_minutes if schedule else None
+        session_id = _make_session(conn, group_id, starts_at, group_row.capacity, manual=True, duration_minutes=duration_minutes)
     with engine.connect() as conn:
         return _detail(conn, session_id)

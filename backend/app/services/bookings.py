@@ -44,6 +44,7 @@ def _eligible(conn: Connection, absence_id: int) -> list[dict]:
     if as_local(origin.registered_at) > original_start - timedelta(hours=24):
         raise DomainError("Esta ausencia no permite reservar una recuperación porque se registró fuera de plazo.")
     last_day = original_start.date() + timedelta(days=7)
+    current_time = now_local()
     candidates = conn.execute(
         select(sessions.c.id, sessions.c.starts_at, sessions.c.duration_minutes, sessions.c.capacity, groups.c.id.label("group_id"), groups.c.name, groups.c.level, groups.c.modality)
         .join(groups, groups.c.id == sessions.c.group_id)
@@ -53,7 +54,7 @@ def _eligible(conn: Connection, absence_id: int) -> list[dict]:
     result = []
     for candidate in candidates:
         starts_at = as_local(candidate.starts_at)
-        if starts_at <= original_start or starts_at.date() > last_day:
+        if starts_at <= original_start or starts_at <= current_time or starts_at.date() > last_day:
             continue
         occupied, capacity = occupancy_for_connection(conn, candidate.id, candidate.capacity)
         if occupied < capacity:
@@ -99,12 +100,14 @@ def list_absences(engine) -> list[dict]:
         result = []
         for row in rows:
             booked = conn.execute(select(recoveries.c.id).where(recoveries.c.absence_id == row.id, recoveries.c.status == "confirmed")).scalars().all()
+            session_start = as_local(row.starts_at)
             result.append({
                 "id": row.id,
                 "studentId": row.student_id,
                 "studentName": row.student_name,
                 "sessionId": row.session_id,
-                "sessionStartsAt": as_local(row.starts_at).isoformat(),
+                "sessionStartsAt": session_start.isoformat(),
+                "deadline": (session_start.date() + timedelta(days=7)).isoformat(),
                 "sessionDurationMinutes": row.session_duration_minutes,
                 "groupName": row.group_name,
                 "level": row.level,

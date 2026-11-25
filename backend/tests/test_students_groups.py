@@ -1,11 +1,14 @@
 from datetime import timedelta
 
 import pytest
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 
 from backend.app.seed import seed_data
+from backend.app.services.bookings import register_absence
+from backend.app.services.calendar import enable_manual_session, set_calendar_day
 from backend.app.services.common import DomainError
 from backend.app.services.groups import create_group, list_groups, update_group
+from backend.app.services.sessions import occupancy
 from backend.app.services.students import create_student, deactivate_student, get_student, update_student
 from backend.app.tables import absences, group_students, recoveries, session_students, sessions, students
 
@@ -68,11 +71,89 @@ def test_group_assignment_cannot_exceed_a_full_group(engine):
         update_student(engine, members[2]["id"], {"name": "Pilates 2", "groupIds": [1]})
 
 
+def test_duplicate_ids_do_not_bypass_group_or_active_student_validation(engine):
+    members = [create_student(engine, {"name": f"Duplicada {index}", "groupIds": []}) for index in range(2)]
+    group = create_group(engine, group_payload(name="Grupo completo", capacity=2, studentIds=[item["id"] for item in members]))
+
+    with pytest.raises(DomainError, match="plazas disponibles"):
+        create_student(engine, {"name": "Alumna extra", "groupIds": [group["id"], group["id"]]})
+
+    inactive = create_student(engine, {"name": "Alumna de baja", "groupIds": []})
+    deactivate_student(engine, inactive["id"])
+    with pytest.raises(DomainError, match="no están disponibles"):
+        create_group(engine, group_payload(name="Grupo con baja", studentIds=[inactive["id"], inactive["id"]]))
+
+
+def test_assignment_rejects_a_full_future_session_even_if_group_has_capacity(engine, fixed_clock):
+    student = create_student(engine, {"name": "Alumna asignada", "groupIds": []})
+    group = create_group(engine, group_payload(capacity=3, studentIds=[student["id"]]))
+    with engine.begin() as conn:
+        session_id = conn.execute(
+            select(sessions.c.id)
+            .where(sessions.c.group_id == group["id"], sessions.c.starts_at > fixed_clock)
+            .order_by(sessions.c.starts_at)
+            .limit(1)
+        ).scalar_one()
+        conn.execute(update(sessions).where(sessions.c.id == session_id).values(capacity=1))
+
+    with pytest.raises(DomainError, match="sesión futura no tiene plazas"):
+        create_student(engine, {"name": "Alumna nueva", "groupIds": [group["id"]]})
+
+
+def test_future_manual_session_rosters_follow_group_changes_and_deactivation(engine, fixed_clock):
+    day = fixed_clock.date() + timedelta(days=1)
+    set_calendar_day(engine, day, {"isNonWorking": True, "note": "Festivo"})
+    first = create_student(engine, {"name": "Alumna manual", "groupIds": []})
+    group = create_group(engine, group_payload(studentIds=[first["id"]]))
+    manual = enable_manual_session(engine, {
+        "groupId": group["id"],
+        "startsAt": (fixed_clock + timedelta(days=1)).replace(hour=12, minute=15).isoformat(),
+    })
+    assert manual["startsAt"].startswith(f"{day.isoformat()}T12:15")
+    assert occupancy(engine, manual["id"])[0] == 1
+
+    update_student(engine, first["id"], {"name": first["name"], "groupIds": []})
+    assert occupancy(engine, manual["id"])[0] == 0
+
+    update_student(engine, first["id"], {"name": first["name"], "groupIds": [group["id"]]})
+    update_group(engine, group["id"], group_payload(studentIds=[]))
+    assert occupancy(engine, manual["id"])[0] == 0
+
+    update_group(engine, group["id"], group_payload(studentIds=[first["id"]]))
+    deactivate_student(engine, first["id"])
+    assert occupancy(engine, manual["id"])[0] == 0
+    with engine.connect() as conn:
+        assert conn.execute(select(session_students.c.student_id).where(session_students.c.session_id == manual["id"])).first() is None
+
+
 def test_group_creation_generates_six_weeks_of_concrete_sessions(engine):
     group = create_group(engine, group_payload())
     with engine.connect() as conn:
         generated = conn.execute(select(sessions.c.id).where(sessions.c.group_id == group["id"])).all()
     assert 5 <= len(generated) <= 7
+
+
+def test_student_group_removal_preserves_future_roster_for_accepted_absence(engine, fixed_clock):
+    student = create_student(engine, {"name": "Alumna ausente", "groupIds": []})
+    group = create_group(engine, group_payload(studentIds=[student["id"]]))
+    with engine.connect() as conn:
+        session_id, starts_at = conn.execute(
+            select(sessions.c.id, sessions.c.starts_at)
+            .where(sessions.c.group_id == group["id"], sessions.c.starts_at > fixed_clock)
+            .order_by(sessions.c.starts_at)
+        ).first()
+
+    register_absence(engine, student["id"], session_id, starts_at - timedelta(hours=24))
+    update_student(engine, student["id"], {"name": student["name"], "groupIds": []})
+
+    assert occupancy(engine, session_id) == (0, group["capacity"])
+    with engine.connect() as conn:
+        assert conn.execute(
+            select(session_students.c.student_id).where(
+                session_students.c.session_id == session_id,
+                session_students.c.student_id == student["id"],
+            )
+        ).scalar_one() == student["id"]
 
 
 def test_group_weekly_schedule_stores_per_day_durations_and_generates_sessions(engine, fixed_clock):

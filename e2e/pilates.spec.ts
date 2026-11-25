@@ -5,6 +5,10 @@ test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date(TEST_NOW));
 });
 
+function testToday(): Date {
+  return new Date(TEST_NOW);
+}
+
 function dayKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
@@ -112,7 +116,7 @@ test('grupos guardan horario, recurrencia, aforo y cambios de participantes', as
 });
 
 test('ausencia válida libera plaza y una solicitud con menos de 24 horas no cambia la sesión', async ({ page }) => {
-  const targetDate = addDays(new Date(), 2);
+  const targetDate = addDays(testToday(), 2);
   const targetDay = dayKey(targetDate);
   const listed = await page.request.get(`/api/sessions?start=${targetDay}&end=${targetDay}`);
   const sessions = await listed.json() as { id: number; startsAt: string; group: { name: string }; students: { id: number; name: string; absent: boolean }[]; occupancy: number }[];
@@ -131,12 +135,12 @@ test('ausencia válida libera plaza y una solicitud con menos de 24 horas no cam
   await expect(row).toContainText(`${previousOccupancy - 1} de 8`);
   await expect(row).toContainText(`${9 - previousOccupancy} plazas libres`);
 
-  const todayKey = dayKey(new Date());
-  const tomorrowKey = dayKey(addDays(new Date(), 1));
+  const todayKey = dayKey(testToday());
+  const tomorrowKey = dayKey(addDays(testToday(), 1));
   const nearResponse = await page.request.get(`/api/sessions?start=${todayKey}&end=${tomorrowKey}`);
   const nearSessions = await nearResponse.json() as { id: number; startsAt: string; group: { name: string }; students: { id: number; absent: boolean }[]; occupancy: number }[];
   const nearSession = nearSessions.find((session) => {
-    const hours = (new Date(session.startsAt).getTime() - Date.now()) / 3_600_000;
+    const hours = (new Date(session.startsAt).getTime() - testToday().getTime()) / 3_600_000;
     return session.group.name === 'Suelo intermedio' && hours > 0 && hours < 24 && !session.students.some((student) => student.absent);
   })!;
   expect(nearSession).toBeTruthy();
@@ -165,8 +169,8 @@ test('recuperación incluye el séptimo día, confirma plaza y no muestra cancel
   await expect(absence.getByRole('heading', { name: 'Sesiones compatibles' })).toBeVisible();
   const eligible = absence.locator('.recovery-option').filter({ hasText: 'Reformer inicial tarde' });
   const formatDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-  const inclusiveDay = formatDay.format(addDays(new Date(), 9));
-  const afterDeadlineDay = formatDay.format(addDays(new Date(), 10));
+  const inclusiveDay = formatDay.format(addDays(testToday(), 9));
+  const afterDeadlineDay = formatDay.format(addDays(testToday(), 10));
   const inclusiveOption = eligible.filter({ hasText: inclusiveDay });
   await expect(inclusiveOption).toHaveCount(1);
   await expect(inclusiveOption.locator('strong')).toContainText(inclusiveDay);
@@ -180,7 +184,7 @@ test('recuperación incluye el séptimo día, confirma plaza y no muestra cancel
 });
 
 test('calendario marca día no lectivo y habilita una sesión sin suspender recurrencias', async ({ page }) => {
-  const holiday = addDays(new Date(), 21);
+  const holiday = addDays(testToday(), 21);
   const day = dayKey(holiday);
   await page.goto('/');
   await page.getByRole('button', { name: 'Calendario del centro' }).click();
